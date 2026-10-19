@@ -9,7 +9,22 @@ It speaks **`easyops.v1.OpsService`** (the easyops Connect API). It carries
 **no cluster credentials of its own**: easyops is the only component with
 Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 
-## Tools (28)
+## Tools (39)
+
+### Sandboxes — lifecycle (6)
+
+**`sandbox-ext` works INSIDE a running sandbox** (exec, files, jobs,
+`computer-*`). It has no tool to create, list, resolve or delete one — that
+half lives here.
+
+| Tool | What it does |
+|---|---|
+| `ops-create-sandbox` | Create a worker sandbox (image, cpu/memory, env, kvm, gpu, volumes, golden_disk) |
+| `ops-list-sandboxes` | List sandboxes with phase / readiness / image / URL |
+| `ops-get-sandbox` | One sandbox |
+| `ops-resolve-sandbox` | The in-cluster **URL + token** — what you need to talk to it |
+| `ops-delete-sandbox` | Delete the Pod, Service and Secret |
+| `ops-sandbox-logs` | The sandbox **pod's** logs — the only way to diagnose one that never started (sandbox-ext cannot enter a sandbox that is not up). Falls back to pod phase / restarts / reason |
 
 ### Services — read
 
@@ -43,28 +58,36 @@ Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 `ops-build-image` — build a repo tarball with the cluster buildkitd and push it
 to the registry.
 
-### Storage — read
+### Storage — read + write
 
-2 tools: `ops-list-pvcs`, `ops-get-pvc`
+4 tools: `ops-list-pvcs`, `ops-get-pvc`, **`ops-create-pvc`** (size, storage
+class), **`ops-delete-pvc`** (⚠️ destroys the data).
 
-### Config (config maps + secrets) — read
+### Config — config maps
 
 5 tools: `ops-list-configmaps`, `ops-get-configmap`,
-`ops-get-configmap-values`, `ops-list-secrets`, `ops-get-secret`
+`ops-get-configmap-values`, **`ops-put-configmap`**, **`ops-delete-configmap`**
 
 `ops-get-configmap` returns **key names only** (quick inventory).
 `ops-get-configmap-values` returns the **full contents** — config map data is
 not secret (secrets are their own object), and an agent cannot patch a map it
-cannot read. Secret VALUES are never returned by either secret tool.
+cannot read.
 
-### Config maps — write (require `allow-write`)
+### Config — secrets
 
-2 tools.
+5 tools: `ops-list-secrets`, `ops-get-secret`, **`ops-get-secret-values`**,
+**`ops-put-secret`**, **`ops-delete-secret`**
 
-| Tool | What it does |
-|---|---|
-| `ops-put-configmap` | Create or **replace** a config map. ⚠️ A k8s write replaces the whole object, so **an omitted key is deleted** — read with `ops-get-configmap-values` first, then send the complete map. `dry_run` validates |
-| `ops-delete-configmap` | Delete a config map |
+`ops-get-secret` is the default and returns **key names only** — reading secret
+values is privileged, so `ops-get-secret-values` is a **separate** tool.
+It exists because `ops-put-secret` REPLACES the whole object: writing without
+reading first would silently destroy keys. `ops-put-secret` never echoes the
+values back, refuses empty `data`, and supports `dry_run`.
+
+> ⚠️ **Any `put-*` tool REPLACES the whole object.** A Kubernetes write is a
+> full object update, so **a key you omit is DELETED**. Read first
+> (`ops-get-configmap-values` / `ops-get-secret-values`), then send the
+> complete map. Both refuse empty `data` and both support `dry_run`.
 
 ### Jobs — run-to-completion
 
