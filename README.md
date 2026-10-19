@@ -63,6 +63,26 @@ to the registry.
 4 tools: `ops-list-pvcs`, `ops-get-pvc`, **`ops-create-pvc`** (size, storage
 class), **`ops-delete-pvc`** (⚠️ destroys the data).
 
+**Reading a PVC.** A claim has exactly three phases — `Pending` / `Bound` /
+`Lost` — and `Pending` covers **both** "the provisioner is still working" and
+"provisioning FAILED". `ops-get-pvc` therefore also reports:
+
+| Field | Why it matters |
+|---|---|
+| `message` | the failing event (`ProvisioningFailed: ...`) or the waiting event (`WaitForFirstConsumer: waiting for first consumer...`) — **the only way to tell the two Pending cases apart** |
+| `age` | seconds = normal, hours = stuck |
+| `volume` | the bound PersistentVolume (`Bound` only) |
+| `size` | `10Gi requested, 10Gi allocated` |
+
+`ops-list-pvcs` appends a one-line hint per row (`mounted by: X`, the pending
+reason + `[pending 8h9m]`, or a loud `LOST: ...`).
+
+**Which claims do you see?** By default only the ones **this deployment
+created** — the platform's own `postgres-data` / `garage-data` are not a
+tenant's business. Pass **`include_all: true`** to list every claim in the
+namespace. If you expect claims and get "none", that is the reason; the tool
+says so and names the flag.
+
 ### Config — config maps
 
 5 tools: `ops-list-configmaps`, `ops-get-configmap`,
