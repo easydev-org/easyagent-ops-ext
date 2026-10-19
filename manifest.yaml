@@ -451,7 +451,20 @@ tools:
       zh: 列出持久卷声明（名称、状态、容量）。
     input_schema:
       type: object
-      properties: {}
+      properties:
+        include_all:
+          type: boolean
+          description: >-
+            List EVERY claim in the namespace, not only the ones this deployment
+            created (default false). The default view is tenant-safe: the
+            platform's own claims (postgres-data, garage-data, ...) are hidden.
+            Set this when you expect claims but get "none" - they may have been
+            created outside easyops.
+          descriptions:
+            zh: >-
+              列出命名空间内的全部 PVC，而不仅是本部署创建的（默认 false）。
+              默认视图是租户安全的：平台自建的卷（postgres-data、garage-data 等）会被隐藏。
+              当你预期有 PVC 却看到「无」时设这个——它们可能是 easyops 之外创建的。
       required: []
 
   - name: ops-get-pvc

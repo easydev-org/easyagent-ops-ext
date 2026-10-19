@@ -45,6 +45,7 @@ const (
 	MsgSandboxDeleted       = "sandboxDeleted"
 	MsgSandboxResolved      = "sandboxResolved"
 	MsgNoSandboxes          = "noSandboxes"
+	MsgNoPVCsManaged        = "noPVCsManaged"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -196,6 +197,10 @@ var Catalog = easybusi18n.Catalog{
 	MsgNoSandboxes: {
 		"en": "no sandboxes",
 		"zh": "没有沙箱",
+	},
+	MsgNoPVCsManaged: {
+		"en": "no PVCs created by this deployment. This namespace may still have claims created outside it (postgres-data, garage-data, ...) - pass `include_all: true` to list every claim in the namespace.",
+		"zh": "本部署没有创建过 PVC。该命名空间可能仍有外部创建的卷（postgres-data、garage-data 等）——传 `include_all: true` 可列出命名空间内的全部 PVC。",
 	},
 }
 

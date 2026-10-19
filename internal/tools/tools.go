@@ -271,7 +271,13 @@ func (t *toolset) listPVCs(ctx context.Context, args map[string]any, session, te
 	if err != nil {
 		return extension.ToolResultData{}, err
 	}
-	res, err := cl.ListPVCs(ctx, &opsv1.ListPVCsRequest{Owner: tenant})
+	// include_all widens the view from "claims easyops created" to "every claim
+	// in the namespace". Default false keeps the tenant-safe view (the
+	// platform's postgres-data / garage-data are not a tenant's business), but
+	// it also means a namespace full of claims can legitimately list "none" —
+	// so the flag is exposed rather than hidden.
+	includeAll := argBool(args, "include_all", false)
+	res, err := cl.ListPVCs(ctx, &opsv1.ListPVCsRequest{Owner: tenant, IncludeAll: includeAll})
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)
 	}
@@ -281,9 +287,17 @@ func (t *toolset) listPVCs(ctx context.Context, args map[string]any, session, te
 			p.GetName(), p.GetPhase(), p.GetSize(), pvcHint(p)))
 	}
 	if len(lines) == 0 {
+		// An empty list is ambiguous on its own: say which view produced it and
+		// how to widen it.
+		if !includeAll {
+			return extension.ToolResultData{Content: i18n.T(locale, i18n.MsgNoPVCsManaged, nil)}, nil
+		}
 		return extension.ToolResultData{Content: i18n.T(locale, i18n.MsgNone, nil)}, nil
 	}
-	return extension.ToolResultData{Content: strings.Join(lines, "\n")}, nil
+	return extension.ToolResultData{
+		Content: strings.Join(lines, "\n"),
+		Data:    map[string]any{"includeAll": includeAll, "count": len(lines)},
+	}, nil
 }
 
 func (t *toolset) getPVC(ctx context.Context, args map[string]any, session, tenant string) (extension.ToolResultData, error) {
