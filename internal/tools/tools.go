@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	easybus "github.com/easydev-org/easybus-sdk"
 	"github.com/easydev-org/easybus-sdk/extension"
@@ -276,7 +277,8 @@ func (t *toolset) listPVCs(ctx context.Context, args map[string]any, session, te
 	}
 	lines := make([]string, 0, len(res.GetPvcs()))
 	for _, p := range res.GetPvcs() {
-		lines = append(lines, fmt.Sprintf("%-28s %-10s %s", p.GetName(), p.GetPhase(), p.GetSize()))
+		lines = append(lines, fmt.Sprintf("%-28s %-9s %-8s %s",
+			p.GetName(), p.GetPhase(), p.GetSize(), pvcHint(p)))
 	}
 	if len(lines) == 0 {
 		return extension.ToolResultData{Content: i18n.T(locale, i18n.MsgNone, nil)}, nil
@@ -300,8 +302,14 @@ func (t *toolset) getPVC(ctx context.Context, args map[string]any, session, tena
 	}
 	p := res.GetPvc()
 	return extension.ToolResultData{
-		Content: fmt.Sprintf("name=%s phase=%s size=%s class=%s mountedBy=%v",
-			p.GetName(), p.GetPhase(), p.GetSize(), p.GetStorageClass(), p.GetMountedBy()),
+		Content: describePVC(p),
+		Data: map[string]any{
+			"name": p.GetName(), "phase": p.GetPhase(),
+			"size": p.GetSize(), "capacity": p.GetCapacity(),
+			"storageClass": p.GetStorageClass(), "namespace": p.GetNamespace(),
+			"boundVolume": p.GetBoundVolume(), "message": p.GetMessage(),
+			"ageSeconds": p.GetAgeSeconds(), "mountedBy": p.GetMountedBy(),
+		},
 	}, nil
 }
 
@@ -563,6 +571,79 @@ func orDefault(v, def string) string {
 
 // fmtInt renders an int32 for a message placeholder.
 func fmtInt(n int32) string { return fmt.Sprintf("%d", n) }
+
+// pvcHint is the one-line explanation appended to a list row.
+//
+// It exists because a PVC has only three phases and `Pending` covers BOTH "the
+// provisioner is still working" and "provisioning FAILED". A bare "Pending" is
+// therefore ambiguous, and an operator (or a model) has no way to tell a claim
+// that needs 10 more seconds from one that will never bind.
+func pvcHint(p *opsv1.PVCInfo) string {
+	switch p.GetPhase() {
+	case "Bound":
+		if m := p.GetMountedBy(); len(m) > 0 {
+			return "mounted by: " + strings.Join(m, ", ")
+		}
+		return ""
+	case "Lost":
+		return "LOST: the bound volume is gone — data is not reachable"
+	}
+	// Pending (or unknown): say WHY, plus how long it has been that way.
+	msg := p.GetMessage()
+	if msg == "" {
+		msg = "(no event yet)"
+	}
+	if age := p.GetAgeSeconds(); age > 0 {
+		return fmt.Sprintf("%s [pending %s]", msg, shortDuration(age))
+	}
+	return msg
+}
+
+// describePVC renders one claim in detail.
+func describePVC(p *opsv1.PVCInfo) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "pvc %s: phase=%s\n", p.GetName(), p.GetPhase())
+	fmt.Fprintf(&b, "  size      : %s requested", p.GetSize())
+	if c := p.GetCapacity(); c != "" {
+		fmt.Fprintf(&b, ", %s allocated", c)
+	}
+	b.WriteString("\n")
+	if sc := p.GetStorageClass(); sc != "" {
+		fmt.Fprintf(&b, "  class     : %s\n", sc)
+	}
+	if ns := p.GetNamespace(); ns != "" {
+		fmt.Fprintf(&b, "  namespace : %s\n", ns)
+	}
+	if v := p.GetBoundVolume(); v != "" {
+		fmt.Fprintf(&b, "  volume    : %s\n", v)
+	}
+	if m := p.GetMountedBy(); len(m) > 0 {
+		fmt.Fprintf(&b, "  mounted by: %s\n", strings.Join(m, ", "))
+	}
+	if age := p.GetAgeSeconds(); age > 0 {
+		fmt.Fprintf(&b, "  age       : %s\n", shortDuration(age))
+	}
+	// The message is the whole point when the claim is not Bound.
+	if msg := p.GetMessage(); msg != "" {
+		fmt.Fprintf(&b, "  message   : %s\n", msg)
+	} else if p.GetPhase() == "Pending" {
+		b.WriteString("  message   : (no event yet — the provisioner has not reported anything)\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// shortDuration renders an age as "12s" / "4m30s" / "2h5m".
+func shortDuration(seconds int64) string {
+	d := time.Duration(seconds) * time.Second
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
+	default:
+		return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60)
+	}
+}
 
 // explainServiceLogs renders a ServiceLogsResponse for a human (or a model).
 //
