@@ -50,6 +50,8 @@ const (
 	MsgBuildCanceled        = "buildCanceled"
 	MsgBuildNotFound        = "buildNotFound"
 	MsgNoBuilds             = "noBuilds"
+	MsgFilesBuilt           = "filesBuilt"
+	MsgFilesTooBig          = "filesTooBig"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -221,6 +223,14 @@ var Catalog = easybusi18n.Catalog{
 	MsgNoBuilds: {
 		"en": "no builds (build records are process memory: a restart clears them, and each replica keeps its own set)",
 		"zh": "没有构建记录（构建记录存在进程内存中：重启会清空，且每个副本各自独立）",
+	},
+	MsgFilesBuilt: {
+		"en": "build FINISHED: {n} file(s), {bytes} bytes",
+		"zh": "构建完成：{n} 个文件，共 {bytes} 字节",
+	},
+	MsgFilesTooBig: {
+		"en": "the exported tree is {bytes} bytes, over the cap — NOTHING was returned (a partial artifact would be worse than a clear failure). Raise `max_bytes`, or build an image instead.",
+		"zh": "导出目录共 {bytes} 字节，超过上限——未返回任何内容（残缺产物比明确失败更糟）。可调高 `max_bytes`，或改为构建镜像。",
 	},
 }
 

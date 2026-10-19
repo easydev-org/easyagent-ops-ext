@@ -54,6 +54,7 @@ func TestWriteToolsRequireAllowWrite(t *testing.T) {
 		{"ops-delete-secret", map[string]any{"name": "sec"}},
 		{"ops-create-build", map[string]any{"repo": "a/b", "archive": "x"}},
 		{"ops-cancel-build", map[string]any{"id": "b1"}},
+		{"ops-build-files", map[string]any{"archive": "x"}},
 	}
 	for _, w := range writes {
 		_, err := r[w.tool](context.Background(), w.args, "s", "t")

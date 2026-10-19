@@ -54,6 +54,7 @@ func Registry(d Deps) map[string]Handler {
 		// image build
 		"ops-build-image":        t.buildImage,
 		"ops-build-image-stream": t.buildImageStream,
+		"ops-build-files":        t.buildFiles,
 		"ops-import-image":       t.importImage,
 		// asynchronous builds (id + history + cancel)
 		"ops-create-build": t.createBuild,

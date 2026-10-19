@@ -445,6 +445,99 @@ tools:
             zh: 目标 tag（默认 "latest"）。
       required: [source, repo]
 
+  - name: ops-build-files
+    description: >-
+      Build a FILE TREE instead of an image — a compiled binary, a frontend
+      dist/, a test report. The Dockerfile must name the stage to export
+      (default "export"): `FROM scratch AS export` plus `COPY --from=build /out /`.
+      Returns the file list, the text of every small file inline, and the whole
+      tree as a base64 tar. Requires allow-write.
+    descriptions:
+      zh: >-
+        构建「文件树」而不是镜像——编译好的二进制、前端 dist/、测试报告。
+        Dockerfile 必须声明要导出的 stage（默认 "export"）：`FROM scratch AS export`
+        加 `COPY --from=build /out /`。返回文件清单、每个小文件的内联文本，以及整棵树的
+        base64 tar。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        archive:
+          type: string
+          description: The repo tarball as TEXT (small repos only).
+          descriptions:
+            zh: 仓库 tar.gz 的文本形式（仅适合小仓库）。
+        archive_base64:
+          type: string
+          description: The repo tarball base64-encoded (preferred).
+          descriptions:
+            zh: 仓库 tar.gz 的 base64（推荐）。
+        stage:
+          type: string
+          description: >-
+            The Dockerfile stage to export (default "export"). Its filesystem
+            becomes the artifact tree.
+          descriptions:
+            zh: >-
+              要导出的 Dockerfile stage（默认 "export"）。它的文件系统就是产物树。
+        dockerfile:
+          type: string
+          description: Dockerfile path (default "Dockerfile").
+          descriptions:
+            zh: Dockerfile 路径（默认 "Dockerfile"）。
+        context:
+          type: string
+          description: Build-context subdirectory ("" = root).
+          descriptions:
+            zh: 构建上下文子目录（"" 表示根目录）。
+        build_args:
+          type: object
+          description: Build args (name -> value).
+          descriptions:
+            zh: 构建参数（名 -> 值）。
+        repo:
+          type: string
+          description: >-
+            OPTIONAL — a file build pushes no image; only used to name the
+            registry cache.
+          descriptions:
+            zh: >-
+              可选——文件构建不推镜像，仅用于命名 registry 缓存。
+        tag:
+          type: string
+          description: Cache tag (default "latest").
+          descriptions:
+            zh: 缓存 tag（默认 "latest"）。
+        max_bytes:
+          type: integer
+          description: >-
+            Cap on the exported tree (0 = 128 MiB). Over the cap NOTHING is
+            returned — a partial artifact would be worse than a clear failure.
+          descriptions:
+            zh: >-
+              导出目录的大小上限（0 表示 128 MiB）。超限时不返回任何内容——
+              残缺产物比明确失败更糟。
+        cache:
+          type: boolean
+          description: Enable registry cache import/export (default TRUE).
+          descriptions:
+            zh: 启用 registry 缓存导入/导出（默认 TRUE）。
+        cache_repo:
+          type: string
+          description: Registry repo holding the cache.
+          descriptions:
+            zh: 存放缓存的 registry 路径。
+        cache_tag:
+          type: string
+          description: Cache tag.
+          descriptions:
+            zh: 缓存 tag。
+        cache_mode:
+          type: string
+          description: '"max" (default) or "min".'
+          descriptions:
+            zh: '"max"（默认）或 "min"。'
+      required: []
+
   # ---- asynchronous builds ---------------------------------------------------
   # ops-build-image BLOCKS until the build finishes and leaves nothing behind.
   # These give a build an identity, so it can be listed, inspected and canceled.
