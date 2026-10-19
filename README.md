@@ -9,7 +9,7 @@ It speaks **`easyops.v1.OpsService`** (the easyops Connect API). It carries
 **no cluster credentials of its own**: easyops is the only component with
 Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 
-## Tools (39)
+## Tools (44)
 
 ### Sandboxes — lifecycle (6)
 
@@ -51,12 +51,74 @@ half lives here.
 | `ops-resume-service` | Restore the count Pause remembered |
 | `ops-delete-service` | Delete the Deployment **and** its Service. Use `pause` to merely stop something |
 
-### Image build (requires `allow-write`)
+### Build (requires `allow-write`)
 
-1 tool.
+| Tool | What it produces |
+|---|---|
+| `ops-build-image` | A container **image**, pushed to the registry (blocks until done) |
+| `ops-build-image-stream` | Same, consuming the streaming endpoint; returns with elapsed time |
+| **`ops-build-files`** | A **FILE TREE** — a compiled binary, a frontend `dist/`, a test report. **No image.** |
+| `ops-import-image` | Mirror an upstream image into the registry |
 
-`ops-build-image` — build a repo tarball with the cluster buildkitd and push it
-to the registry.
+#### Building files instead of an image
+
+`ops-build-files` is for artifacts that are not containers. The Dockerfile names
+the stage to export (default `export`):
+
+```dockerfile
+FROM golang:1.26-alpine AS build
+RUN go build -o /out/hello .
+FROM scratch AS export
+COPY --from=build /out/hello /hello
+```
+
+The result comes back **both ways**:
+- **inline** — every small text file is returned verbatim, so you can actually
+  read what was built (e.g. check `index.html` references the right asset);
+- **as a base64 tar** — the exact bytes, for a caller that will untar it.
+
+A file is inlined only when it is small **and** textual: binary bytes are listed
+but not embedded. A tree over `max_bytes` (default 128 MiB) returns **nothing**
+plus a clear message — a partial artifact is worse than a failure.
+
+`repo`/`tag` are optional here: a file build pushes no image.
+
+#### Asynchronous builds (identity + history)
+
+`ops-build-image`/`-stream` **block** and leave nothing behind. These do not:
+
+| Tool | What it does |
+|---|---|
+| `ops-create-build` | Start in the **background**, return an id immediately (~1 ms) |
+| `ops-list-builds` | Newest-first: state, duration, image, error |
+| `ops-get-build` | One build + a **paged, line-numbered** log window |
+| `ops-cancel-build` | Stop a running build |
+
+⚠️ **Records live in easyops process memory.** A restart clears them and each
+replica keeps its own set — recent activity, not an audit log. Every record
+says `durability=memory`. Logs are capped at **1 MiB** per build (truncation is
+flagged, and the full output size is still reported).
+
+#### Paging a build log
+
+`ops-get-build` returns log lines **numbered**, like `sandbox-file-read`:
+
+```
+ops-get-build id=b3                        # first 200 lines
+ops-get-build id=b3 offset=200 limit=200   # next window
+ops-get-build id=b3 limit=1000             # max pages (cap is 1000)
+```
+
+```
+ 21: log line 21
+ 22: log line 22
+--- lines 21-22 of 60 ---
+more lines available: re-run with offset=22 (limit up to 1000)
+```
+
+Numbers are **absolute** (a page starting at line 21 is numbered 21), so a line
+can be referred to later. The footer always states the window and, when more
+exists, the exact next `offset`.
 
 ### Storage — read + write
 
