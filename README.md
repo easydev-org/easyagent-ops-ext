@@ -9,7 +9,7 @@ It speaks **`easyops.v1.OpsService`** (the easyops Connect API). It carries
 **no cluster credentials of its own**: easyops is the only component with
 Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 
-## Tools (22)
+## Tools (28)
 
 ### Services — read
 
@@ -24,7 +24,7 @@ Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 
 ### Services — write (require `allow-write`)
 
-6 tools.
+7 tools.
 
 | Tool | What it does |
 |---|---|
@@ -34,6 +34,7 @@ Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 | `ops-scale-service` | Set the replica count (scale up **and** down) |
 | `ops-pause-service` | Scale to zero, remembering the count |
 | `ops-resume-service` | Restore the count Pause remembered |
+| `ops-delete-service` | Delete the Deployment **and** its Service. Use `pause` to merely stop something |
 
 ### Image build (requires `allow-write`)
 
@@ -42,12 +43,28 @@ Kubernetes RBAC, so this extension is a thin, policy-controlled client.
 `ops-build-image` — build a repo tarball with the cluster buildkitd and push it
 to the registry.
 
-### Storage / config — read
+### Storage — read
 
-6 tools.
+2 tools: `ops-list-pvcs`, `ops-get-pvc`
 
-`ops-list-pvcs`, `ops-get-pvc`, `ops-list-configmaps`, `ops-get-configmap`,
-`ops-list-secrets`, `ops-get-secret`
+### Config (config maps + secrets) — read
+
+5 tools: `ops-list-configmaps`, `ops-get-configmap`,
+`ops-get-configmap-values`, `ops-list-secrets`, `ops-get-secret`
+
+`ops-get-configmap` returns **key names only** (quick inventory).
+`ops-get-configmap-values` returns the **full contents** — config map data is
+not secret (secrets are their own object), and an agent cannot patch a map it
+cannot read. Secret VALUES are never returned by either secret tool.
+
+### Config maps — write (require `allow-write`)
+
+2 tools.
+
+| Tool | What it does |
+|---|---|
+| `ops-put-configmap` | Create or **replace** a config map. ⚠️ A k8s write replaces the whole object, so **an omitted key is deleted** — read with `ops-get-configmap-values` first, then send the complete map. `dry_run` validates |
+| `ops-delete-configmap` | Delete a config map |
 
 ### Jobs — run-to-completion
 
