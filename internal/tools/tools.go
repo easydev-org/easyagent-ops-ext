@@ -71,14 +71,29 @@ func (t *toolset) locale(session, tenant string) string {
 
 // cfg parses the caller's config.
 func (t *toolset) cfg(session, tenant string) config.Config {
+	// Knob values arrive typed: a `type: boolean` knob is a bool, not a string.
+	// Stringify everything so one reader handles every declared type (an
+	// allow-write bool silently read as "" would disable the guard's OFF state
+	// in an undebuggable way).
 	get := func(name string) string {
 		if t.deps.GetConfig == nil {
 			return ""
 		}
-		if s, ok := t.deps.GetConfig(name, session, tenant).(string); ok {
-			return s
+		switch v := t.deps.GetConfig(name, session, tenant).(type) {
+		case string:
+			return v
+		case bool:
+			if v {
+				return "true"
+			}
+			return "false"
+		case float64:
+			return fmt.Sprintf("%v", v)
+		case nil:
+			return ""
+		default:
+			return fmt.Sprintf("%v", v)
 		}
-		return ""
 	}
 	return config.Parse(get)
 }

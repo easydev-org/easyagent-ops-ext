@@ -79,6 +79,35 @@ func TestURLRequired(t *testing.T) {
 	}
 }
 
+// TestBooleanKnobIsHonoured: `allow-write` is declared `type: boolean`, so the
+// config value arrives as a BOOL. A reader that only accepts strings would see
+// "" and the guard would never lift — this pins that a bool is understood.
+func TestBooleanKnobIsHonoured(t *testing.T) {
+	r := Registry(Deps{
+		Cache:  ops.NewClientCache(2),
+		Locale: func(string, string) string { return "en" },
+		GetConfig: func(name, _, _ string) any {
+			switch name {
+			case config.KnobURL:
+				return "http://127.0.0.1:1" // unroutable: we only assert the GUARD passes
+			case config.KnobNamespace:
+				return "dev"
+			case config.KnobAllowWrite:
+				return true // ← a bool, not "true"
+			}
+			return nil
+		},
+	})
+	_, err := r["ops-delete-job"](context.Background(), map[string]any{"name": "j"}, "s", "t")
+	// The guard must PASS now, so the failure (if any) is the unreachable
+	// backend — NOT the allow-write refusal.
+	if err != nil {
+		if te, ok := err.(*extension.TypedError); ok && strings.Contains(te.Message, "allow-write") {
+			t.Fatalf("allow-write=true (bool) must lift the guard, got: %v", te.Message)
+		}
+	}
+}
+
 func asTyped(err error, out **extension.TypedError) bool {
 	te, ok := err.(*extension.TypedError)
 	if ok {
