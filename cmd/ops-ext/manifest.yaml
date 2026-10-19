@@ -555,6 +555,19 @@ tools:
           description: Build id (from ops-create-build / ops-list-builds).
           descriptions:
             zh: 构建 id（来自 ops-create-build / ops-list-builds）。
+        offset:
+          type: integer
+          description: >-
+            Skip this many log LINES (0 = the first line).
+          descriptions:
+            zh: 跳过多少行日志（0 表示第一行）。
+        limit:
+          type: integer
+          description: >-
+            Max log lines to return. Default 200, capped at 1000. Page through a
+            long log with offset/limit.
+          descriptions:
+            zh: 最多返回多少行日志。默认 200，上限 1000。长日志用 offset/limit 分页。
       required: [id]
 
   - name: ops-cancel-build

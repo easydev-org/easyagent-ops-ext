@@ -139,7 +139,16 @@ func (t *toolset) listBuilds(ctx context.Context, args map[string]any, session, 
 	}, nil
 }
 
-// getBuild shows one build, including its log tail.
+// getBuild shows one build plus a paged, line-numbered window of its log.
+//
+// The log is paged by LINE (offset/limit), mirroring sandbox-file-read: a log is
+// read top-down, and a line number is what a reader can act on ("look at line
+// 812"). Every line is prefixed with its number so a long log stays navigable.
+//
+// Default page: the first 200 lines. That is the OPPOSITE of a tail — and it is
+// deliberate: the record keeps the HEAD of the log (see easyops buildreg), so
+// offset 0 is line 1 and paging through the whole log stays coherent. Use
+// offset to walk to the end (where a failure's exit status usually is).
 func (t *toolset) getBuild(ctx context.Context, args map[string]any, session, tenant string) (extension.ToolResultData, error) {
 	locale := t.locale(session, tenant)
 	cfg := t.cfg(session, tenant)
@@ -151,7 +160,15 @@ func (t *toolset) getBuild(ctx context.Context, args map[string]any, session, te
 	if id == "" {
 		return extension.ToolResultData{}, errArg("id")
 	}
-	res, err := cl.GetBuild(ctx, &opsv1.GetBuildRequest{Owner: tenant, Id: id})
+	offset := argInt(args, "offset", 0)
+	limit := argInt(args, "limit", 0)
+	if offset < 0 {
+		offset = 0
+	}
+	res, err := cl.GetBuild(ctx, &opsv1.GetBuildRequest{
+		Owner: tenant, Id: id,
+		LogOffset: int32(offset), LogLimit: int32(limit),
+	})
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)
 	}
@@ -162,12 +179,82 @@ func (t *toolset) getBuild(ctx context.Context, args map[string]any, session, te
 		}
 	}
 	b := res.GetBuild()
-	body := describeBuild(b)
-	if log := strings.TrimSpace(b.GetLog()); log != "" {
-		body += "\n  log (tail):\n" + indent(log, "    ")
-	}
-	return extension.ToolResultData{Content: body, Data: buildMap(b)}, nil
+	var sb strings.Builder
+	sb.WriteString(describeBuild(b))
+	sb.WriteString("\n")
+	sb.WriteString(renderLogPage(res))
+	data := buildMap(b)
+	data["logLines"] = res.GetLogLines()
+	data["firstLine"] = res.GetFirstLine()
+	data["totalLines"] = res.GetTotalLines()
+	data["more"] = res.GetMore()
+	return extension.ToolResultData{Content: sb.String(), Data: data}, nil
 }
+
+// logPageData is the paging metadata a caller needs to ask for the next window.
+type logPageData struct {
+	FirstLine  int
+	TotalLines int
+	Shown      int
+	More       bool
+	Truncated  bool
+	Dropped    bool
+}
+
+// It is returned separately so the tool can both render and hand back Data.
+func logPage(res *opsv1.GetBuildResponse) logPageData {
+	return logPageData{
+		FirstLine:  int(res.GetFirstLine()),
+		TotalLines: int(res.GetTotalLines()),
+		Shown:      len(res.GetLogLines()),
+		More:       res.GetMore(),
+		Truncated:  res.GetBuild().GetLogTruncated(),
+		Dropped:    res.GetBuild().GetLogDropped(),
+	}
+}
+
+// renderLogPage prints a line-numbered window plus the paging footer.
+//
+// Line numbers are right-aligned to the width of the LAST line in the page, so
+// the numbers form a column whether the page holds lines 8-12 or 9,981-9,995.
+func renderLogPage(res *opsv1.GetBuildResponse) string {
+	p := logPage(res)
+	var b strings.Builder
+
+	switch {
+	case p.Dropped:
+		b.WriteString("log: (released to stay within the memory budget — this build finished long ago;\n")
+		b.WriteString("      its status and timing are still available, the log body is not)")
+		return b.String()
+	case p.TotalLines == 0 && p.Shown == 0:
+		b.WriteString("log: (empty — the build produced no output)")
+		return b.String()
+	}
+
+	last := p.FirstLine + p.Shown - 1
+	width := len(fmt.Sprintf("%d", last))
+	for i, line := range res.GetLogLines() {
+		fmt.Fprintf(&b, "%*d: %s\n", width, p.FirstLine+i, line)
+	}
+
+	// Footer: always state the window, and how to get the rest.
+	if p.Shown > 0 {
+		fmt.Fprintf(&b, "--- lines %d-%d of %d ---\n", p.FirstLine, last, p.TotalLines)
+	}
+	if p.More {
+		fmt.Fprintf(&b, "more lines available: re-run with offset=%d (limit up to %d)\n",
+			last, buildLogMaxLines)
+	}
+	if p.Truncated {
+		fmt.Fprintf(&b, "NOTE: the build output exceeded the 1 MiB record limit, so lines after the cap\n")
+		fmt.Fprintf(&b, "      are NOT stored at all — do not read this as the complete log.\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// buildLogMaxLines mirrors easyops's per-page cap, so the "more lines" hint never
+// suggests a limit the server will silently reduce.
+const buildLogMaxLines = 1000
 
 // cancelBuild stops a running build.
 func (t *toolset) cancelBuild(ctx context.Context, args map[string]any, session, tenant string) (extension.ToolResultData, error) {
