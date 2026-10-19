@@ -42,6 +42,13 @@ func Registry(d Deps) map[string]Handler {
 		"ops-get-service":      t.getService,
 		"ops-service-logs":     t.serviceLogs,
 		"ops-service-manifest": t.serviceManifest,
+		// services (write: upgrade / patch / rollback / scale / pause)
+		"ops-deploy-service":   t.deployService,
+		"ops-apply-manifest":   t.applyManifest,
+		"ops-rollback-service": t.rollbackService,
+		"ops-scale-service":    t.scaleService,
+		"ops-pause-service":    t.pauseService,
+		"ops-resume-service":   t.resumeService,
 		// image build
 		"ops-build-image": t.buildImage,
 		// storage / config (read)
@@ -150,14 +157,17 @@ func (t *toolset) listServices(ctx context.Context, args map[string]any, session
 			"createdAt": s.GetCreatedAt(),
 		})
 		mark := " "
-		if s.GetReady() {
+		switch {
+		case s.GetReplicas() > 0 && s.GetReadyReplicas() == s.GetReplicas():
 			mark = "*"
+		case s.GetReadyReplicas() > 0:
+			mark = "~" // partially ready: a rollout is still converging
 		}
 		paused := ""
 		if s.GetPaused() {
 			paused = " (paused)"
 		}
-		lines = append(lines, fmt.Sprintf("%s %-24s %s %d/%d%s %s",
+		lines = append(lines, fmt.Sprintf("%s %-24s %-12s %d/%d ready%s %s",
 			mark, s.GetName(), s.GetPhase(), s.GetReadyReplicas(), s.GetReplicas(), paused, s.GetImage()))
 	}
 	if len(lines) == 0 {
@@ -196,11 +206,22 @@ func (t *toolset) serviceLogs(ctx context.Context, args map[string]any, session,
 	res, err := cl.ServiceLogs(ctx, &opsv1.ServiceLogsRequest{
 		Owner: tenant, Name: name,
 		TailLines: int64(argInt(args, "tail", 200)),
+		// previous=true reads the PREVIOUS container instance, which is the only
+		// way to see why a CrashLoopBackOff pod died (the current container may
+		// have produced no output at all).
+		Previous: argBool(args, "previous", false),
 	})
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)
 	}
-	return extension.ToolResultData{Content: strings.Join(res.GetLines(), "\n")}, nil
+	return extension.ToolResultData{
+		Content: explainServiceLogs(res, argBool(args, "previous", false)),
+		Data: map[string]any{
+			"lines": res.GetLines(), "podPhase": res.GetPodPhase(),
+			"restarts": res.GetRestarts(), "message": res.GetMessage(),
+			"available": res.GetAvailable(),
+		},
+	}, nil
 }
 
 func (t *toolset) serviceManifest(ctx context.Context, args map[string]any, session, tenant string) (extension.ToolResultData, error) {
@@ -557,6 +578,66 @@ func orDefault(v, def string) string {
 	return v
 }
 
+// fmtInt renders an int32 for a message placeholder.
+func fmtInt(n int32) string { return fmt.Sprintf("%d", n) }
+
+// explainServiceLogs renders a ServiceLogsResponse for a human (or a model).
+//
+// The DIAGNOSTIC HEADER is ALWAYS emitted, never gated on whether the log body
+// is empty. Logs and diagnostics are DIFFERENT evidence from DIFFERENT k8s
+// APIs (the pod log stream vs the pod status object), and each answers a
+// question the other cannot:
+//
+//   - logs say WHAT the process did ("fatal: missing DATABASE_URL");
+//   - the header says HOW the pod is doing (phase, restart count, and the first
+//     unhealthy container's reason: CrashLoopBackOff / OOMKilled /
+//     ImagePullBackOff).
+//
+// Gating the header on "no logs" hid it in the case it matters most: a crash
+// looping container still prints its message before each death, so lines is
+// non-empty while restarts climbs and reason explains the loop. Always showing
+// both costs one line of noise on a healthy pod ("Running, restarts=0") and
+// removes a whole class of "why does it keep dying?" confusion.
+func explainServiceLogs(res *opsv1.ServiceLogsResponse, previous bool) string {
+	var b strings.Builder
+
+	// diagnostic header (always)
+	b.WriteString("pod status:\n")
+	phase := res.GetPodPhase()
+	if phase == "" {
+		phase = "unknown"
+	}
+	fmt.Fprintf(&b, "  phase    : %s\n", phase)
+	fmt.Fprintf(&b, "  restarts : %d", res.GetRestarts())
+	if res.GetRestarts() > 0 && !previous {
+		b.WriteString("  (the container has died and been restarted)")
+	}
+	b.WriteString("\n")
+	if m := res.GetMessage(); m != "" {
+		fmt.Fprintf(&b, "  reason   : %s\n", m)
+	}
+
+	// log body
+	body := strings.Join(res.GetLines(), "\n")
+	label := "logs"
+	if previous {
+		label = "logs (PREVIOUS container instance)"
+	}
+	if strings.TrimSpace(body) == "" {
+		b.WriteString("\n" + label + ": (no output from this container instance)")
+		if !res.GetAvailable() {
+			b.WriteString("\n  the log stream was NOT available for this container")
+		}
+		if !previous {
+			b.WriteString("\n  a container that died produced its output in the PREVIOUS instance, " +
+				"so re-run with `previous: true`")
+		}
+	} else {
+		b.WriteString("\n" + label + ":\n" + body)
+	}
+	return b.String()
+}
+
 func sortedKeys(m map[string]string) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -596,8 +677,14 @@ func describeService(s *opsv1.ServiceInfo) string {
 	if s == nil {
 		return ""
 	}
-	return fmt.Sprintf("service %s: phase=%s ready=%v %d/%d image=%s url=%s%s",
-		s.GetName(), s.GetPhase(), s.GetReady(), s.GetReadyReplicas(), s.GetReplicas(),
+	// READY/TOTAL is the single most useful line: "0/2" says the rollout has not
+	// converged even when the phase looks calm.
+	paused := ""
+	if s.GetPaused() {
+		paused = " [PAUSED]"
+	}
+	return fmt.Sprintf("service %s: phase=%s replicas=%d/%d (ready/total)%s image=%s url=%s%s",
+		s.GetName(), s.GetPhase(), s.GetReadyReplicas(), s.GetReplicas(), paused,
 		s.GetImage(), s.GetUrl(), cond(s.GetMessage(), " message="))
 }
 

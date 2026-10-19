@@ -8,17 +8,25 @@ import (
 
 // Message keys (typed; a typo is a compile error at the call site).
 const (
-	MsgNotConfigured   = "notConfigured"
-	MsgNamespaceDenied = "namespaceDenied"
-	MsgWriteDisabled   = "writeDisabled"
-	MsgNoServices      = "noServices"
-	MsgNoJobs          = "noJobs"
-	MsgNone            = "none"
-	MsgImageBuilt      = "imageBuilt"
-	MsgArchiveRequired = "archiveRequired"
-	MsgJobCreated      = "jobCreated"
-	MsgJobDeleted      = "jobDeleted"
-	MsgSecretKeysOnly  = "secretKeysOnly"
+	MsgNotConfigured    = "notConfigured"
+	MsgNamespaceDenied  = "namespaceDenied"
+	MsgWriteDisabled    = "writeDisabled"
+	MsgNoServices       = "noServices"
+	MsgNoJobs           = "noJobs"
+	MsgNone             = "none"
+	MsgImageBuilt       = "imageBuilt"
+	MsgArchiveRequired  = "archiveRequired"
+	MsgJobCreated       = "jobCreated"
+	MsgJobDeleted       = "jobDeleted"
+	MsgSecretKeysOnly   = "secretKeysOnly"
+	MsgDeployed         = "deployed"
+	MsgManifestApplied  = "manifestApplied"
+	MsgManifestDryRunOK = "manifestDryRunOK"
+	MsgRolledBack       = "rolledBack"
+	MsgRevisionN        = "revisionN"
+	MsgScaled           = "scaled"
+	MsgPaused           = "paused"
+	MsgResumed          = "resumed"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -66,6 +74,38 @@ var Catalog = easybusi18n.Catalog{
 	MsgSecretKeysOnly: {
 		"en": "secret {name}: keys only (values are never returned): {keys}",
 		"zh": "机密 {name}：仅键名（永不返回值）：{keys}",
+	},
+	MsgDeployed: {
+		"en": "deployed {name}",
+		"zh": "已部署 {name}",
+	},
+	MsgManifestApplied: {
+		"en": "applied manifest to {name}",
+		"zh": "已将 manifest 应用到 {name}",
+	},
+	MsgManifestDryRunOK: {
+		"en": "manifest for {name} is VALID (dry run, nothing changed)",
+		"zh": "{name} 的 manifest 校验通过（dry run，未做任何改动）",
+	},
+	MsgRolledBack: {
+		"en": "rolled {name} back to {which}",
+		"zh": "已将 {name} 回滚到 {which}",
+	},
+	MsgRevisionN: {
+		"en": "revision {n}",
+		"zh": "版本 {n}",
+	},
+	MsgScaled: {
+		"en": "scaled {name} to {n} replica(s)",
+		"zh": "已将 {name} 扩缩到 {n} 个副本",
+	},
+	MsgPaused: {
+		"en": "paused {name}",
+		"zh": "已暂停 {name}",
+	},
+	MsgResumed: {
+		"en": "resumed {name}",
+		"zh": "已恢复 {name}",
 	},
 }
 

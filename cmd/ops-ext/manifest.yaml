@@ -54,6 +54,180 @@ tools:
           description: Max lines (default 200).
           descriptions:
             zh: 最大行数（默认 200）。
+        previous:
+          type: boolean
+          description: >-
+            Read the PREVIOUS container instance. This is the only way to see
+            why a CrashLoopBackOff pod died — the current container may have
+            produced no output at all.
+          descriptions:
+            zh: >-
+              读取上一个容器实例的日志。这是查看 CrashLoopBackOff 崩溃原因的唯一办法——
+              当前容器可能根本没有输出。
+      required: [name]
+
+  - name: ops-deploy-service
+    description: >-
+      Create or replace a long-lived service (Deployment + Service) from
+      structured fields. Requires allow-write.
+    descriptions:
+      zh: >-
+        用结构化字段创建或替换一个长驻服务（Deployment + Service）。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+        image:
+          type: string
+          description: Container image.
+          descriptions:
+            zh: 容器镜像。
+        replicas:
+          type: integer
+          description: Replica count (default 1).
+          descriptions:
+            zh: 副本数（默认 1）。
+        container_port:
+          type: integer
+          description: Port the container listens on.
+          descriptions:
+            zh: 容器监听端口。
+        service_port:
+          type: integer
+          description: Port the Service exposes.
+          descriptions:
+            zh: Service 暴露的端口。
+        env:
+          type: object
+          description: Environment variables (name -> value).
+          descriptions:
+            zh: 环境变量（名 -> 值）。
+        cpu:
+          type: string
+          description: CPU limit, e.g. "500m".
+          descriptions:
+            zh: CPU 限制，如 "500m"。
+        memory:
+          type: string
+          description: Memory limit, e.g. "512Mi".
+          descriptions:
+            zh: 内存限制，如 "512Mi"。
+        command:
+          type: array
+          description: Entrypoint override.
+          descriptions:
+            zh: 覆盖 entrypoint。
+        namespace:
+          type: string
+          description: Target namespace (must be the configured one).
+          descriptions:
+            zh: 目标命名空间（必须是配置的那个）。
+      required: [name, image]
+
+  - name: ops-apply-manifest
+    description: >-
+      Patch a service from an edited multi-document YAML — THE way to upgrade
+      (change image tag, env, resources). Always dry_run=true first: it
+      validates without changing anything. Requires allow-write.
+    descriptions:
+      zh: >-
+        用编辑过的多文档 YAML 修补服务——这是升级（换镜像 tag、改 env、改资源）的正确方式。
+        务必先 dry_run=true：只校验，不做任何改动。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+        yaml:
+          type: string
+          description: The full multi-document manifest (from ops-service-manifest, edited).
+          descriptions:
+            zh: 完整的多文档 manifest（来自 ops-service-manifest，编辑后）。
+        dry_run:
+          type: boolean
+          description: Validate only, change nothing (default false).
+          descriptions:
+            zh: 仅校验、不做改动（默认 false）。
+      required: [name, yaml]
+
+  - name: ops-rollback-service
+    description: >-
+      Roll a service back to a previous revision (k8s `rollout undo`).
+      Omit revision for the immediately previous one. Requires allow-write.
+    descriptions:
+      zh: >-
+        将服务回滚到之前的某个版本（k8s `rollout undo`）。省略 revision 表示上一个版本。
+        需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+        revision:
+          type: integer
+          description: Target revision (0/omitted = the previous one).
+          descriptions:
+            zh: 目标版本（0 或省略表示上一个）。
+      required: [name]
+
+  - name: ops-scale-service
+    description: Set a service's replica count. Requires allow-write.
+    descriptions:
+      zh: 设置服务的副本数。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+        replicas:
+          type: integer
+          description: Desired replica count.
+          descriptions:
+            zh: 期望的副本数。
+      required: [name, replicas]
+
+  - name: ops-pause-service
+    description: >-
+      Pause a service (scale to zero), remembering the count so resume can
+      restore it. Requires allow-write.
+    descriptions:
+      zh: >-
+        暂停服务（缩到 0 副本），并记住原副本数以便恢复。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+      required: [name]
+
+  - name: ops-resume-service
+    description: Resume a paused service (restores the remembered replica count). Requires allow-write.
+    descriptions:
+      zh: 恢复已暂停的服务（恢复之前记住的副本数）。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
       required: [name]
 
   - name: ops-service-manifest

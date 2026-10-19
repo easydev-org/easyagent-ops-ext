@@ -37,6 +37,12 @@ func TestWriteToolsRequireAllowWrite(t *testing.T) {
 		{"ops-build-image", map[string]any{"repo": "a/b", "archive": "x"}},
 		{"ops-create-job", map[string]any{"name": "j", "image": "i"}},
 		{"ops-delete-job", map[string]any{"name": "j"}},
+		{"ops-deploy-service", map[string]any{"name": "s", "image": "i"}},
+		{"ops-apply-manifest", map[string]any{"name": "s", "yaml": "x"}},
+		{"ops-rollback-service", map[string]any{"name": "s"}},
+		{"ops-scale-service", map[string]any{"name": "s", "replicas": float64(2)}},
+		{"ops-pause-service", map[string]any{"name": "s"}},
+		{"ops-resume-service", map[string]any{"name": "s"}},
 	}
 	for _, w := range writes {
 		_, err := r[w.tool](context.Background(), w.args, "s", "t")
