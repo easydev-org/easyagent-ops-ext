@@ -55,6 +55,11 @@ func Registry(d Deps) map[string]Handler {
 		"ops-build-image":        t.buildImage,
 		"ops-build-image-stream": t.buildImageStream,
 		"ops-import-image":       t.importImage,
+		// asynchronous builds (id + history + cancel)
+		"ops-create-build": t.createBuild,
+		"ops-list-builds":  t.listBuilds,
+		"ops-get-build":    t.getBuild,
+		"ops-cancel-build": t.cancelBuild,
 		// storage / config (read)
 		"ops-list-pvcs":       t.listPVCs,
 		"ops-get-pvc":         t.getPVC,
@@ -585,6 +590,9 @@ func orDefault(v, def string) string {
 
 // fmtInt renders an int32 for a message placeholder.
 func fmtInt(n int32) string { return fmt.Sprintf("%d", n) }
+
+// nowMillis is the clock used for elapsed-time rendering (unix millis).
+func nowMillis() int64 { return time.Now().UnixMilli() }
 
 // pvcHint is the one-line explanation appended to a list row.
 //

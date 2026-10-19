@@ -445,6 +445,135 @@ tools:
             zh: 目标 tag（默认 "latest"）。
       required: [source, repo]
 
+  # ---- asynchronous builds ---------------------------------------------------
+  # ops-build-image BLOCKS until the build finishes and leaves nothing behind.
+  # These give a build an identity, so it can be listed, inspected and canceled.
+  # NOTE: build records live in the easyops PROCESS MEMORY — a restart clears
+  # them and each replica keeps its own set. Treat them as recent activity, not
+  # an audit log.
+
+  - name: ops-create-build
+    description: >-
+      Start a build in the BACKGROUND and return its id immediately. Use this
+      instead of ops-build-image when you want to poll progress, do something
+      else meanwhile, or be able to cancel. Requires allow-write.
+    descriptions:
+      zh: >-
+        在后台启动构建并立即返回 id。当你想轮询进度、同时做别的事、或希望能够取消时，
+        用它代替 ops-build-image。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        repo:
+          type: string
+          description: Destination repo path.
+          descriptions:
+            zh: 目标镜像路径。
+        tag:
+          type: string
+          description: Destination tag (default "latest").
+          descriptions:
+            zh: 目标 tag（默认 "latest"）。
+        archive:
+          type: string
+          description: The repo tarball as TEXT (small repos only).
+          descriptions:
+            zh: 仓库 tar.gz 的文本形式（仅适合小仓库）。
+        archive_base64:
+          type: string
+          description: The repo tarball base64-encoded (preferred for real tarballs).
+          descriptions:
+            zh: 仓库 tar.gz 的 base64（真实 tar.gz 请用这个）。
+        dockerfile:
+          type: string
+          description: Dockerfile path (default "Dockerfile").
+          descriptions:
+            zh: Dockerfile 路径（默认 "Dockerfile"）。
+        context:
+          type: string
+          description: Build-context subdirectory ("" = root).
+          descriptions:
+            zh: 构建上下文子目录（"" 表示根目录）。
+        build_args:
+          type: object
+          description: Build args (name -> value).
+          descriptions:
+            zh: 构建参数（名 -> 值）。
+        cache:
+          type: boolean
+          description: Enable registry cache import/export (default TRUE).
+          descriptions:
+            zh: 启用 registry 缓存导入/导出（默认 TRUE）。
+        cache_repo:
+          type: string
+          description: Registry repo holding the cache.
+          descriptions:
+            zh: 存放缓存的 registry 路径。
+        cache_tag:
+          type: string
+          description: Cache tag.
+          descriptions:
+            zh: 缓存 tag。
+        cache_mode:
+          type: string
+          description: '"max" (default) or "min".'
+          descriptions:
+            zh: '"max"（默认）或 "min"。'
+      required: [repo]
+
+  - name: ops-list-builds
+    description: >-
+      List builds newest-first with state, duration, image and error. Records
+      are easyops PROCESS MEMORY: a restart clears them.
+    descriptions:
+      zh: >-
+        按时间倒序列出构建，含状态、耗时、镜像与错误。记录存在 easyops 进程内存中：
+        重启会清空。
+    input_schema:
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: Max records (default 50; 0 = everything held).
+          descriptions:
+            zh: 最大条数（默认 50；0 表示全部）。
+      required: []
+
+  - name: ops-get-build
+    description: >-
+      Show one build with its state, duration, image/error and the TAIL of its
+      log. This is how you answer "did that build finish, and why did it fail?"
+    descriptions:
+      zh: >-
+        查看单个构建的状态、耗时、镜像/错误，以及日志尾部。这是回答
+        「那个构建完成了没有、为什么失败」的方式。
+    input_schema:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Build id (from ops-create-build / ops-list-builds).
+          descriptions:
+            zh: 构建 id（来自 ops-create-build / ops-list-builds）。
+      required: [id]
+
+  - name: ops-cancel-build
+    description: >-
+      Cancel a running build. A build that already finished is left unchanged
+      and its final state is reported. Requires allow-write.
+    descriptions:
+      zh: >-
+        取消正在运行的构建。已完成的构建不会被改动，直接返回其终态。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Build id.
+          descriptions:
+            zh: 构建 id。
+      required: [id]
+
   - name: ops-list-pvcs
     description: List persistent volume claims (name, phase, size).
     descriptions:

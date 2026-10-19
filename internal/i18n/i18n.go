@@ -46,6 +46,10 @@ const (
 	MsgSandboxResolved      = "sandboxResolved"
 	MsgNoSandboxes          = "noSandboxes"
 	MsgNoPVCsManaged        = "noPVCsManaged"
+	MsgBuildStarted         = "buildStarted"
+	MsgBuildCanceled        = "buildCanceled"
+	MsgBuildNotFound        = "buildNotFound"
+	MsgNoBuilds             = "noBuilds"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -201,6 +205,22 @@ var Catalog = easybusi18n.Catalog{
 	MsgNoPVCsManaged: {
 		"en": "no PVCs created by this deployment. This namespace may still have claims created outside it (postgres-data, garage-data, ...) - pass `include_all: true` to list every claim in the namespace.",
 		"zh": "本部署没有创建过 PVC。该命名空间可能仍有外部创建的卷（postgres-data、garage-data 等）——传 `include_all: true` 可列出命名空间内的全部 PVC。",
+	},
+	MsgBuildStarted: {
+		"en": "build {id} STARTED for {repo}:{tag} — it runs in the background; poll ops-get-build, or ops-cancel-build to stop it",
+		"zh": "构建 {id} 已启动（{repo}:{tag}）——它在后台运行；用 ops-get-build 轮询，或 ops-cancel-build 取消",
+	},
+	MsgBuildCanceled: {
+		"en": "build {id} is now {state}",
+		"zh": "构建 {id} 当前状态：{state}",
+	},
+	MsgBuildNotFound: {
+		"en": "build {id} not found (build records are process memory: a restart clears them, and each replica keeps its own set)",
+		"zh": "未找到构建 {id}（构建记录存在进程内存中：重启会清空，且每个副本各自独立）",
+	},
+	MsgNoBuilds: {
+		"en": "no builds (build records are process memory: a restart clears them, and each replica keeps its own set)",
+		"zh": "没有构建记录（构建记录存在进程内存中：重启会清空，且每个副本各自独立）",
 	},
 }
 
