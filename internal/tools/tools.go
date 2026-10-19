@@ -49,6 +49,7 @@ func Registry(d Deps) map[string]Handler {
 		"ops-scale-service":    t.scaleService,
 		"ops-pause-service":    t.pauseService,
 		"ops-resume-service":   t.resumeService,
+		"ops-delete-service":   t.deleteService,
 		// image build
 		"ops-build-image":        t.buildImage,
 		"ops-build-image-stream": t.buildImageStream,
@@ -58,8 +59,12 @@ func Registry(d Deps) map[string]Handler {
 		"ops-get-pvc":         t.getPVC,
 		"ops-list-configmaps": t.listConfigMaps,
 		"ops-get-configmap":   t.getConfigMap,
-		"ops-list-secrets":    t.listSecrets,
-		"ops-get-secret":      t.getSecret,
+		// config maps (write) — values ARE readable (they are not secrets)
+		"ops-get-configmap-values": t.getConfigMapValues,
+		"ops-put-configmap":        t.putConfigMap,
+		"ops-delete-configmap":     t.deleteConfigMap,
+		"ops-list-secrets":         t.listSecrets,
+		"ops-get-secret":           t.getSecret,
 		// jobs (block 2)
 		"ops-create-job": t.createJob,
 		"ops-list-jobs":  t.listJobs,

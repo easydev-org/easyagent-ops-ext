@@ -8,28 +8,33 @@ import (
 
 // Message keys (typed; a typo is a compile error at the call site).
 const (
-	MsgNotConfigured    = "notConfigured"
-	MsgNamespaceDenied  = "namespaceDenied"
-	MsgWriteDisabled    = "writeDisabled"
-	MsgNoServices       = "noServices"
-	MsgNoJobs           = "noJobs"
-	MsgNone             = "none"
-	MsgImageBuilt       = "imageBuilt"
-	MsgArchiveRequired  = "archiveRequired"
-	MsgJobCreated       = "jobCreated"
-	MsgJobDeleted       = "jobDeleted"
-	MsgSecretKeysOnly   = "secretKeysOnly"
-	MsgDeployed         = "deployed"
-	MsgManifestApplied  = "manifestApplied"
-	MsgManifestDryRunOK = "manifestDryRunOK"
-	MsgRolledBack       = "rolledBack"
-	MsgRevisionN        = "revisionN"
-	MsgScaled           = "scaled"
-	MsgPaused           = "paused"
-	MsgResumed          = "resumed"
-	MsgBuildDone        = "buildDone"
-	MsgBuildFailed      = "buildFailed"
-	MsgImageImported    = "imageImported"
+	MsgNotConfigured     = "notConfigured"
+	MsgNamespaceDenied   = "namespaceDenied"
+	MsgWriteDisabled     = "writeDisabled"
+	MsgNoServices        = "noServices"
+	MsgNoJobs            = "noJobs"
+	MsgNone              = "none"
+	MsgImageBuilt        = "imageBuilt"
+	MsgArchiveRequired   = "archiveRequired"
+	MsgJobCreated        = "jobCreated"
+	MsgJobDeleted        = "jobDeleted"
+	MsgSecretKeysOnly    = "secretKeysOnly"
+	MsgDeployed          = "deployed"
+	MsgManifestApplied   = "manifestApplied"
+	MsgManifestDryRunOK  = "manifestDryRunOK"
+	MsgRolledBack        = "rolledBack"
+	MsgRevisionN         = "revisionN"
+	MsgScaled            = "scaled"
+	MsgPaused            = "paused"
+	MsgResumed           = "resumed"
+	MsgBuildDone         = "buildDone"
+	MsgBuildFailed       = "buildFailed"
+	MsgImageImported     = "imageImported"
+	MsgServiceDeleted    = "serviceDeleted"
+	MsgServiceNotFound   = "serviceNotFound"
+	MsgConfigMapPut      = "configMapPut"
+	MsgConfigMapDeleted  = "configMapDeleted"
+	MsgConfigMapDryRunOK = "configMapDryRunOK"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -121,6 +126,26 @@ var Catalog = easybusi18n.Catalog{
 	MsgImageImported: {
 		"en": "imported {ref}",
 		"zh": "已导入 {ref}",
+	},
+	MsgServiceDeleted: {
+		"en": "deleted service {name}",
+		"zh": "已删除服务 {name}",
+	},
+	MsgServiceNotFound: {
+		"en": "service {name} not found (nothing deleted)",
+		"zh": "未找到服务 {name}（未删除任何东西）",
+	},
+	MsgConfigMapPut: {
+		"en": "wrote configmap {name} ({n} keys: {keys}) — the object was REPLACED, so any key not listed is gone",
+		"zh": "已写入 ConfigMap {name}（{n} 个键：{keys}）——该对象被整体替换，未列出的键已消失",
+	},
+	MsgConfigMapDeleted: {
+		"en": "deleted configmap {name}",
+		"zh": "已删除 ConfigMap {name}",
+	},
+	MsgConfigMapDryRunOK: {
+		"en": "configmap {name} is VALID (dry run, nothing changed); keys: {keys}",
+		"zh": "ConfigMap {name} 校验通过（dry run，未做改动）；键：{keys}",
 	},
 }
 

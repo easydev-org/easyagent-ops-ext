@@ -230,6 +230,25 @@ tools:
             zh: 服务名。
       required: [name]
 
+  - name: ops-delete-service
+    description: >-
+      Delete a service (its Deployment AND its Service object). Use
+      ops-pause-service instead if you only want it to stop for a while.
+      Requires allow-write.
+    descriptions:
+      zh: >-
+        删除一个服务（Deployment 和 Service 对象一并删除）。如果只是想暂时停掉，
+        请用 ops-pause-service。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+      required: [name]
+
   - name: ops-service-manifest
     description: Show a service's live Kubernetes manifest as YAML.
     descriptions:
@@ -462,6 +481,79 @@ tools:
     description: Show a config map's key names (values are not returned).
     descriptions:
       zh: 查看 ConfigMap 的键名（不返回值）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: ConfigMap name.
+          descriptions:
+            zh: ConfigMap 名。
+      required: [name]
+
+  - name: ops-get-configmap-values
+    description: >-
+      Show a config map's FULL contents (keys AND values). Config map data is
+      not secret (secrets live in Secret objects), and an agent cannot patch a
+      config map it cannot read. Use ops-get-configmap for a quick key
+      inventory instead.
+    descriptions:
+      zh: >-
+        查看 ConfigMap 的完整内容（键和值）。ConfigMap 数据本身不是机密（机密在
+        Secret 对象里），而 agent 无法修改自己读不到的 ConfigMap。
+        只想快速看键名请用 ops-get-configmap。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: ConfigMap name.
+          descriptions:
+            zh: ConfigMap 名。
+      required: [name]
+
+  - name: ops-put-configmap
+    description: >-
+      Create or replace a config map. WARNING: `data` REPLACES the whole
+      object — any key you omit is DELETED. Read the current contents with
+      ops-get-configmap-values first, then send the complete map. Use
+      dry_run=true to validate. Requires allow-write.
+    descriptions:
+      zh: >-
+        创建或替换 ConfigMap。注意：`data` 会整体替换该对象——你遗漏的任何键都会被删除。
+        请先用 ops-get-configmap-values 读出当前完整内容，再提交完整的 map。
+        可用 dry_run=true 先校验。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: ConfigMap name.
+          descriptions:
+            zh: ConfigMap 名。
+        data:
+          type: object
+          description: >-
+            The COMPLETE key/value map. Omitted keys are removed.
+          descriptions:
+            zh: >-
+              完整的键值对。未包含的键会被删除。
+        dry_run:
+          type: boolean
+          description: Validate only, change nothing (default false).
+          descriptions:
+            zh: 仅校验、不做改动（默认 false）。
+        namespace:
+          type: string
+          description: Target namespace (must be the configured one).
+          descriptions:
+            zh: 目标命名空间（必须是配置的那个）。
+      required: [name, data]
+
+  - name: ops-delete-configmap
+    description: Delete a config map. Requires allow-write.
+    descriptions:
+      zh: 删除 ConfigMap。需要 allow-write。
     input_schema:
       type: object
       properties:
