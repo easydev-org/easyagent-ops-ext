@@ -1,0 +1,382 @@
+id: ops
+version: 1.0
+lifecycle: [deleted]
+
+# ops-ext: Kubernetes operations through the easyops OpsService. It carries NO
+# cluster credentials of its own — every call goes to easyops, which is the
+# only component with k8s RBAC.
+#
+# Two guards apply to every tool:
+#   * `namespace`   — only the configured tenant namespace may be touched;
+#   * `allow-write` — every state-changing tool is refused unless enabled.
+# Secret VALUES are never returned: ops-get-secret reports key names only.
+tools:
+  - name: ops-list-services
+    description: >-
+      List the deployed services with phase, readiness, replica counts, image
+      and URL. A leading * marks a ready service.
+    descriptions:
+      zh: >-
+        列出已部署的服务，含状态、就绪、副本数、镜像与 URL。行首 * 表示已就绪。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-service
+    description: Show one service in detail (phase, ready replicas, URL, restarts, message).
+    descriptions:
+      zh: 查看单个服务的详情（状态、就绪副本、URL、重启次数、消息）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+      required: [name]
+
+  - name: ops-service-logs
+    description: Read a service's container logs (tail lines).
+    descriptions:
+      zh: 读取服务容器日志（尾部若干行）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+        tail:
+          type: integer
+          description: Max lines (default 200).
+          descriptions:
+            zh: 最大行数（默认 200）。
+      required: [name]
+
+  - name: ops-service-manifest
+    description: Show a service's live Kubernetes manifest as YAML.
+    descriptions:
+      zh: 以 YAML 显示服务的实际 Kubernetes manifest。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name.
+          descriptions:
+            zh: 服务名。
+      required: [name]
+
+  - name: ops-build-image
+    description: >-
+      Build a container image from a repository tarball (tar.gz) with the
+      cluster buildkitd and push it to the registry. Requires allow-write.
+      The archive must be the base64-or-text tarball of the repo.
+    descriptions:
+      zh: >-
+        用集群 buildkitd 从仓库 tarball（tar.gz）构建镜像并推送到 registry。
+        需要 allow-write。archive 为仓库 tar.gz 的内容。
+    input_schema:
+      type: object
+      properties:
+        repo:
+          type: string
+          description: Destination repo path, e.g. "easyagent/myapp".
+          descriptions:
+            zh: 目标镜像路径，例如 "easyagent/myapp"。
+        tag:
+          type: string
+          description: Destination tag.
+          descriptions:
+            zh: 目标 tag。
+        archive:
+          type: string
+          description: The repo tarball (tar.gz) to build from.
+          descriptions:
+            zh: 用于构建的仓库 tar.gz 内容。
+        dockerfile:
+          type: string
+          description: Dockerfile path within the archive (default "Dockerfile").
+          descriptions:
+            zh: 归档内 Dockerfile 路径（默认 "Dockerfile"）。
+        context:
+          type: string
+          description: Build-context subdirectory ("" = root).
+          descriptions:
+            zh: 构建上下文子目录（"" 表示根目录）。
+        build_args:
+          type: object
+          description: Build args (name -> value).
+          descriptions:
+            zh: 构建参数（名 -> 值）。
+      required: [repo, archive]
+
+  - name: ops-list-pvcs
+    description: List persistent volume claims (name, phase, size).
+    descriptions:
+      zh: 列出持久卷声明（名称、状态、容量）。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-pvc
+    description: Show one PVC (phase, size, storage class, mounting workloads).
+    descriptions:
+      zh: 查看单个 PVC（状态、容量、存储类、挂载它的工作负载）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: PVC name.
+          descriptions:
+            zh: PVC 名。
+      required: [name]
+
+  - name: ops-list-configmaps
+    description: List config map names.
+    descriptions:
+      zh: 列出 ConfigMap 名称。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-configmap
+    description: Show a config map's key names (values are not returned).
+    descriptions:
+      zh: 查看 ConfigMap 的键名（不返回值）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: ConfigMap name.
+          descriptions:
+            zh: ConfigMap 名。
+      required: [name]
+
+  - name: ops-list-secrets
+    description: >-
+      List secret names with their KEY NAMES only. Secret values are never
+      returned to a client.
+    descriptions:
+      zh: >-
+        列出机密名及其键名。机密值永不返回给客户端。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-secret
+    description: >-
+      Show a secret's KEY NAMES and whether each is set. Values are withheld.
+    descriptions:
+      zh: >-
+        查看机密的键名及其是否已设置。值会被隐去。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Secret name.
+          descriptions:
+            zh: 机密名。
+      required: [name]
+
+  - name: ops-create-job
+    description: >-
+      Run a container to completion as a Kubernetes Job — e.g. a one-shot
+      buildctl build, a migration, a test run. Waits up to 5 minutes for a
+      terminal state (a longer job returns as "active"; poll with ops-get-job).
+      Requires allow-write.
+    descriptions:
+      zh: >-
+        以 Kubernetes Job 方式运行一次性容器任务（如一次 buildctl 构建、迁移、测试）。
+        最多等待 5 分钟到终态（更久的任务返回 "active"，用 ops-get-job 轮询）。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Job name (unique within the namespace).
+          descriptions:
+            zh: 任务名（命名空间内唯一）。
+        image:
+          type: string
+          description: Container image to run.
+          descriptions:
+            zh: 要运行的容器镜像。
+        command:
+          type: array
+          description: Entrypoint override.
+          descriptions:
+            zh: 覆盖 entrypoint。
+        args:
+          type: array
+          description: Arguments.
+          descriptions:
+            zh: 参数。
+        env:
+          type: object
+          description: Environment variables (name -> value).
+          descriptions:
+            zh: 环境变量（名 -> 值）。
+        cpu:
+          type: string
+          description: CPU limit, e.g. "500m".
+          descriptions:
+            zh: CPU 限制，如 "500m"。
+        memory:
+          type: string
+          description: Memory limit, e.g. "512Mi".
+          descriptions:
+            zh: 内存限制，如 "512Mi"。
+        restart_policy:
+          type: string
+          description: Never (default) or OnFailure.
+          descriptions:
+            zh: Never（默认）或 OnFailure。
+        backoff_limit:
+          type: integer
+          description: Retry cap (default 0 for Never, 6 for OnFailure).
+          descriptions:
+            zh: 重试上限（Never 默认 0，OnFailure 默认 6）。
+        active_deadline_seconds:
+          type: integer
+          description: Wall-clock deadline for the whole job (0 = none).
+          descriptions:
+            zh: 整个任务的超时秒数（0 表示不限）。
+        ttl_seconds_after_finished:
+          type: integer
+          description: Auto-delete the finished job after N seconds (0 = keep).
+          descriptions:
+            zh: 完成后 N 秒自动删除任务（0 表示保留）。
+        volumes:
+          type: array
+          description: PVC mounts, each {claim, mount_path, name?, sub_path?, read_only?}.
+          descriptions:
+            zh: PVC 挂载，每项 {claim, mount_path, name?, sub_path?, read_only?}。
+        node_selector:
+          type: object
+          description: Node selector labels.
+          descriptions:
+            zh: 节点选择标签。
+        namespace:
+          type: string
+          description: Target namespace (must be the configured one).
+          descriptions:
+            zh: 目标命名空间（必须是配置的那个）。
+      required: [name, image]
+
+  - name: ops-list-jobs
+    description: List jobs with state (active/succeeded/failed), exit code and failure reason.
+    descriptions:
+      zh: 列出任务及其状态（active/succeeded/failed）、退出码与失败原因。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-job
+    description: Show one job (state, exit code, failure reason, timestamps).
+    descriptions:
+      zh: 查看单个任务（状态、退出码、失败原因、时间戳）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Job name.
+          descriptions:
+            zh: 任务名。
+      required: [name]
+
+  - name: ops-job-logs
+    description: Read a job pod's logs (tail lines).
+    descriptions:
+      zh: 读取任务 Pod 的日志（尾部若干行）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Job name.
+          descriptions:
+            zh: 任务名。
+        container:
+          type: string
+          description: Container name ("" = the job's container).
+          descriptions:
+            zh: 容器名（"" 表示任务的容器）。
+        tail:
+          type: integer
+          description: Max lines (default 200).
+          descriptions:
+            zh: 最大行数（默认 200）。
+      required: [name]
+
+  - name: ops-delete-job
+    description: Delete a job and its pods. Requires allow-write.
+    descriptions:
+      zh: 删除任务及其 Pod。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Job name.
+          descriptions:
+            zh: 任务名。
+        propagation:
+          type: string
+          description: background (default) or foreground.
+          descriptions:
+            zh: background（默认）或 foreground。
+      required: [name]
+
+config:
+  - name: easyops-url
+    type: string
+    scope: global
+    default: ""
+    description: The easyops OpsService base URL, e.g. http://easyops.worker.svc.cluster.local.
+    descriptions:
+      zh: easyops OpsService 的基础 URL，例如 http://easyops.worker.svc.cluster.local。
+
+  - name: easyops-token
+    type: string
+    kind: secret
+    scope: global
+    description: >-
+      The easyops shared service token (bearer). This value is a SECRET: it is
+      never returned to a client.
+    descriptions:
+      zh: >-
+        easyops 的共享服务令牌（bearer）。该值为机密：永不返回给客户端。
+
+  - name: namespace
+    type: string
+    scope: global
+    default: dev
+    description: >-
+      The ONLY namespace this extension may touch. Every request carrying a
+      namespace must match it. Empty disables the check.
+    descriptions:
+      zh: >-
+        本扩展唯一允许操作的命名空间。请求携带的命名空间必须与之一致。留空则关闭检查。
+
+  - name: allow-write
+    type: boolean
+    scope: global
+    default: false
+    description: >-
+      Enable state-changing tools (build image, create/delete job). OFF by
+      default: an agent can still list/get/logs but cannot change anything.
+    descriptions:
+      zh: >-
+        启用会改变状态的工具（构建镜像、创建/删除任务）。默认关闭：agent 仍可列出/查看/看日志，但不能改动任何东西。
