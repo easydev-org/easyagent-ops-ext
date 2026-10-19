@@ -468,6 +468,54 @@ tools:
             zh: PVC 名。
       required: [name]
 
+  - name: ops-create-pvc
+    description: >-
+      Create a persistent volume claim. Mount it into a service or job with a
+      `volumes` entry. Requires allow-write.
+    descriptions:
+      zh: >-
+        创建持久卷声明。可在服务或任务的 `volumes` 中挂载它。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: PVC name.
+          descriptions:
+            zh: PVC 名。
+        size:
+          type: string
+          description: Requested size, e.g. "10Gi".
+          descriptions:
+            zh: 申请容量，如 "10Gi"。
+        storage_class:
+          type: string
+          description: Storage class ("" = the deployment default).
+          descriptions:
+            zh: 存储类（"" 表示部署默认值）。
+        namespace:
+          type: string
+          description: Target namespace (must be the configured one).
+          descriptions:
+            zh: 目标命名空间（必须是配置的那个）。
+      required: [name]
+
+  - name: ops-delete-pvc
+    description: >-
+      Delete a PVC. WARNING: this DESTROYS the data on it. Requires allow-write.
+    descriptions:
+      zh: >-
+        删除 PVC。警告：会销毁其上的数据。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: PVC name.
+          descriptions:
+            zh: PVC 名。
+      required: [name]
+
   - name: ops-list-configmaps
     description: List config map names.
     descriptions:
@@ -582,6 +630,75 @@ tools:
     descriptions:
       zh: >-
         查看机密的键名及其是否已设置。值会被隐去。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Secret name.
+          descriptions:
+            zh: 机密名。
+      required: [name]
+
+  - name: ops-get-secret-values
+    description: >-
+      Return a secret's FULL contents (keys AND VALUES). This is a privileged
+      act: prefer ops-get-secret (key names only) unless you actually need the
+      credential. It exists because ops-put-secret REPLACES the whole object,
+      so writing without reading first would silently destroy keys.
+    descriptions:
+      zh: >-
+        返回机密的完整内容（键和值）。这是特权操作：除非确实需要该凭据，否则请用
+        ops-get-secret（仅键名）。它存在的原因是 ops-put-secret 会整体替换对象，
+        不先读就写会静默销毁其他键。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Secret name.
+          descriptions:
+            zh: 机密名。
+      required: [name]
+
+  - name: ops-put-secret
+    description: >-
+      Create or replace a secret. WARNING: `data` REPLACES the whole object —
+      any key you omit is DELETED; read with ops-get-secret-values first.
+      `dry_run` validates. Requires allow-write.
+    descriptions:
+      zh: >-
+        创建或替换机密。注意：`data` 会整体替换该对象——遗漏的键会被删除；请先用
+        ops-get-secret-values 读出。可用 `dry_run` 校验。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Secret name.
+          descriptions:
+            zh: 机密名。
+        data:
+          type: object
+          description: The COMPLETE key/value map. Omitted keys are removed.
+          descriptions:
+            zh: 完整的键值对。未包含的键会被删除。
+        dry_run:
+          type: boolean
+          description: Validate only, change nothing (default false).
+          descriptions:
+            zh: 仅校验、不做改动（默认 false）。
+        namespace:
+          type: string
+          description: Target namespace (must be the configured one).
+          descriptions:
+            zh: 目标命名空间（必须是配置的那个）。
+      required: [name, data]
+
+  - name: ops-delete-secret
+    description: Delete a secret. Requires allow-write.
+    descriptions:
+      zh: 删除机密。需要 allow-write。
     input_schema:
       type: object
       properties:
@@ -741,6 +858,158 @@ tools:
           description: background (default) or foreground.
           descriptions:
             zh: background（默认）或 foreground。
+      required: [name]
+
+  # ---- sandboxes -------------------------------------------------------------
+  # sandbox-ext operates INSIDE a running sandbox (exec / files / jobs /
+  # computer-*). It has no tool to CREATE, LIST, RESOLVE or DELETE one; that
+  # half lives here.
+
+  - name: ops-create-sandbox
+    description: >-
+      Create a worker sandbox (a machine to run commands in) and return its
+      URL. Once it is ready, use the sandbox-* / computer-* tools to work
+      inside it. Requires allow-write.
+    descriptions:
+      zh: >-
+        创建一个 worker 沙箱（一台可执行命令的机器）并返回其 URL。就绪后用
+        sandbox-* / computer-* 工具在里面工作。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Sandbox name (unique in the namespace; never reused).
+          descriptions:
+            zh: 沙箱名（命名空间内唯一，不可复用）。
+        image:
+          type: string
+          description: Worker image ("" = the deployment default).
+          descriptions:
+            zh: worker 镜像（"" 表示部署默认值）。
+        cpu:
+          type: string
+          description: CPU limit, e.g. "1".
+          descriptions:
+            zh: CPU 限制，如 "1"。
+        memory:
+          type: string
+          description: Memory limit, e.g. "2Gi".
+          descriptions:
+            zh: 内存限制，如 "2Gi"。
+        env:
+          type: object
+          description: Environment variables (name -> value).
+          descriptions:
+            zh: 环境变量（名 -> 值）。
+        kvm:
+          type: boolean
+          description: Request KVM (for VM sandboxes).
+          descriptions:
+            zh: 申请 KVM（用于 VM 类沙箱）。
+        gpu_count:
+          type: integer
+          description: GPU count.
+          descriptions:
+            zh: GPU 数量。
+        ready_timeout_seconds:
+          type: integer
+          description: How long to wait for ready (0 = backend default).
+          descriptions:
+            zh: 等待就绪的秒数（0 表示后端默认）。
+        golden_disk:
+          type: boolean
+          description: Reuse the shared golden-disk base (VM sandboxes).
+          descriptions:
+            zh: 复用共享 golden-disk 基础镜像（VM 沙箱）。
+        volumes:
+          type: array
+          description: PVC mounts, each {pvc, mount_path, sub_path?, read_only?}.
+          descriptions:
+            zh: PVC 挂载，每项 {pvc, mount_path, sub_path?, read_only?}。
+      required: [name]
+
+  - name: ops-list-sandboxes
+    description: List sandboxes with phase, readiness, image and URL.
+    descriptions:
+      zh: 列出沙箱及其状态、就绪、镜像与 URL。
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: ops-get-sandbox
+    description: Show one sandbox (phase, readiness, image, URL).
+    descriptions:
+      zh: 查看单个沙箱（状态、就绪、镜像、URL）。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Sandbox name.
+          descriptions:
+            zh: 沙箱名。
+      required: [name]
+
+  - name: ops-resolve-sandbox
+    description: >-
+      Return a sandbox's in-cluster URL AND its token — what you need to talk
+      to it directly.
+    descriptions:
+      zh: >-
+        返回沙箱的集群内 URL 及其 token——直接访问它所需的东西。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Sandbox name.
+          descriptions:
+            zh: 沙箱名。
+      required: [name]
+
+  - name: ops-delete-sandbox
+    description: Delete a sandbox (its Pod, Service and Secret). Requires allow-write.
+    descriptions:
+      zh: 删除沙箱（Pod、Service、Secret 一并删除）。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Sandbox name.
+          descriptions:
+            zh: 沙箱名。
+      required: [name]
+
+  - name: ops-sandbox-logs
+    description: >-
+      Read a sandbox POD's logs. This is the only way to diagnose a sandbox
+      that FAILED to start — sandbox-ext cannot run inside a sandbox that is
+      not up. Shows pod phase / restarts / reason when there is no output.
+    descriptions:
+      zh: >-
+        读取沙箱 Pod 的日志。这是诊断「沙箱起不来」的唯一手段——sandbox-ext 无法进入
+        一个没起来的沙箱。无输出时会显示 pod 状态 / 重启次数 / 原因。
+    input_schema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Sandbox name.
+          descriptions:
+            zh: 沙箱名。
+        tail:
+          type: integer
+          description: Max lines (default 200).
+          descriptions:
+            zh: 最大行数（默认 200）。
+        previous:
+          type: boolean
+          description: Read the previous container instance.
+          descriptions:
+            zh: 读取上一个容器实例的日志。
       required: [name]
 
 config:

@@ -71,6 +71,19 @@ func Registry(d Deps) map[string]Handler {
 		"ops-get-job":    t.getJob,
 		"ops-job-logs":   t.jobLogs,
 		"ops-delete-job": t.deleteJob,
+		// sandboxes (lifecycle; sandbox-ext only works INSIDE a running one)
+		"ops-create-sandbox":  t.createSandbox,
+		"ops-list-sandboxes":  t.listSandboxes,
+		"ops-get-sandbox":     t.getSandbox,
+		"ops-resolve-sandbox": t.resolveSandbox,
+		"ops-delete-sandbox":  t.deleteSandbox,
+		"ops-sandbox-logs":    t.sandboxLogs,
+		// storage + secrets (write)
+		"ops-create-pvc":        t.createPVC,
+		"ops-delete-pvc":        t.deletePVC,
+		"ops-put-secret":        t.putSecret,
+		"ops-delete-secret":     t.deleteSecret,
+		"ops-get-secret-values": t.getSecretValues,
 	}
 }
 

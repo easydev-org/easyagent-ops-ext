@@ -8,33 +8,43 @@ import (
 
 // Message keys (typed; a typo is a compile error at the call site).
 const (
-	MsgNotConfigured     = "notConfigured"
-	MsgNamespaceDenied   = "namespaceDenied"
-	MsgWriteDisabled     = "writeDisabled"
-	MsgNoServices        = "noServices"
-	MsgNoJobs            = "noJobs"
-	MsgNone              = "none"
-	MsgImageBuilt        = "imageBuilt"
-	MsgArchiveRequired   = "archiveRequired"
-	MsgJobCreated        = "jobCreated"
-	MsgJobDeleted        = "jobDeleted"
-	MsgSecretKeysOnly    = "secretKeysOnly"
-	MsgDeployed          = "deployed"
-	MsgManifestApplied   = "manifestApplied"
-	MsgManifestDryRunOK  = "manifestDryRunOK"
-	MsgRolledBack        = "rolledBack"
-	MsgRevisionN         = "revisionN"
-	MsgScaled            = "scaled"
-	MsgPaused            = "paused"
-	MsgResumed           = "resumed"
-	MsgBuildDone         = "buildDone"
-	MsgBuildFailed       = "buildFailed"
-	MsgImageImported     = "imageImported"
-	MsgServiceDeleted    = "serviceDeleted"
-	MsgServiceNotFound   = "serviceNotFound"
-	MsgConfigMapPut      = "configMapPut"
-	MsgConfigMapDeleted  = "configMapDeleted"
-	MsgConfigMapDryRunOK = "configMapDryRunOK"
+	MsgNotConfigured        = "notConfigured"
+	MsgNamespaceDenied      = "namespaceDenied"
+	MsgWriteDisabled        = "writeDisabled"
+	MsgNoServices           = "noServices"
+	MsgNoJobs               = "noJobs"
+	MsgNone                 = "none"
+	MsgImageBuilt           = "imageBuilt"
+	MsgArchiveRequired      = "archiveRequired"
+	MsgJobCreated           = "jobCreated"
+	MsgJobDeleted           = "jobDeleted"
+	MsgSecretKeysOnly       = "secretKeysOnly"
+	MsgDeployed             = "deployed"
+	MsgManifestApplied      = "manifestApplied"
+	MsgManifestDryRunOK     = "manifestDryRunOK"
+	MsgRolledBack           = "rolledBack"
+	MsgRevisionN            = "revisionN"
+	MsgScaled               = "scaled"
+	MsgPaused               = "paused"
+	MsgResumed              = "resumed"
+	MsgBuildDone            = "buildDone"
+	MsgBuildFailed          = "buildFailed"
+	MsgImageImported        = "imageImported"
+	MsgServiceDeleted       = "serviceDeleted"
+	MsgServiceNotFound      = "serviceNotFound"
+	MsgConfigMapPut         = "configMapPut"
+	MsgConfigMapDeleted     = "configMapDeleted"
+	MsgConfigMapDryRunOK    = "configMapDryRunOK"
+	MsgPVCCreated           = "pvcCreated"
+	MsgPVCDeleted           = "pvcDeleted"
+	MsgSecretPut            = "secretPut"
+	MsgSecretDeleted        = "secretDeleted"
+	MsgSecretDryRunOK       = "secretDryRunOK"
+	MsgSecretValuesReturned = "secretValuesReturned"
+	MsgSandboxCreated       = "sandboxCreated"
+	MsgSandboxDeleted       = "sandboxDeleted"
+	MsgSandboxResolved      = "sandboxResolved"
+	MsgNoSandboxes          = "noSandboxes"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -146,6 +156,46 @@ var Catalog = easybusi18n.Catalog{
 	MsgConfigMapDryRunOK: {
 		"en": "configmap {name} is VALID (dry run, nothing changed); keys: {keys}",
 		"zh": "ConfigMap {name} 校验通过（dry run，未做改动）；键：{keys}",
+	},
+	MsgPVCCreated: {
+		"en": "created PVC {name} ({size}, phase {phase})",
+		"zh": "已创建 PVC {name}（{size}，状态 {phase}）",
+	},
+	MsgPVCDeleted: {
+		"en": "deleted PVC {name} — its data is GONE",
+		"zh": "已删除 PVC {name} —— 其数据已丢失",
+	},
+	MsgSecretPut: {
+		"en": "wrote secret {name} ({keys}) — the object was REPLACED, so any key not listed is gone",
+		"zh": "已写入机密 {name}（{keys}）——该对象被整体替换，未列出的键已消失",
+	},
+	MsgSecretDeleted: {
+		"en": "deleted secret {name}",
+		"zh": "已删除机密 {name}",
+	},
+	MsgSecretDryRunOK: {
+		"en": "secret {name} is VALID (dry run, nothing changed); keys: {keys}",
+		"zh": "机密 {name} 校验通过（dry run，未做改动）；键：{keys}",
+	},
+	MsgSecretValuesReturned: {
+		"en": "secret {name}: SECRET VALUES (treat as sensitive)",
+		"zh": "机密 {name}：以下是机密值（请按敏感信息处理）",
+	},
+	MsgSandboxCreated: {
+		"en": "created sandbox {name}",
+		"zh": "已创建沙箱 {name}",
+	},
+	MsgSandboxDeleted: {
+		"en": "deleted sandbox {name}",
+		"zh": "已删除沙箱 {name}",
+	},
+	MsgSandboxResolved: {
+		"en": "sandbox {name} is reachable at {url} (token in data)",
+		"zh": "沙箱 {name} 可通过 {url} 访问（token 在 data 中）",
+	},
+	MsgNoSandboxes: {
+		"en": "no sandboxes",
+		"zh": "没有沙箱",
 	},
 }
 
