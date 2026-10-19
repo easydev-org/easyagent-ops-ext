@@ -248,11 +248,11 @@ tools:
     description: >-
       Build a container image from a repository tarball (tar.gz) with the
       cluster buildkitd and push it to the registry. Requires allow-write.
-      The archive must be the base64-or-text tarball of the repo.
+      Returns the FULL build log once the build finishes.
     descriptions:
       zh: >-
         用集群 buildkitd 从仓库 tarball（tar.gz）构建镜像并推送到 registry。
-        需要 allow-write。archive 为仓库 tar.gz 的内容。
+        需要 allow-write。构建完成后返回完整构建日志。
     input_schema:
       type: object
       properties:
@@ -263,14 +263,23 @@ tools:
             zh: 目标镜像路径，例如 "easyagent/myapp"。
         tag:
           type: string
-          description: Destination tag.
+          description: Destination tag (default "latest").
           descriptions:
-            zh: 目标 tag。
+            zh: 目标 tag（默认 "latest"）。
         archive:
           type: string
-          description: The repo tarball (tar.gz) to build from.
+          description: The repo tarball as TEXT (small repos only).
           descriptions:
-            zh: 用于构建的仓库 tar.gz 内容。
+            zh: 仓库 tar.gz 的文本形式（仅适合小仓库）。
+        archive_base64:
+          type: string
+          description: >-
+            The repo tarball base64-encoded. Use this for a real tar.gz (tar
+            output contains NUL bytes and cannot survive a JSON string).
+          descriptions:
+            zh: >-
+              仓库 tar.gz 的 base64 编码。真实 tar.gz 请用这个（tar 输出含 NUL 字节，
+              无法作为 JSON 字符串传递）。
         dockerfile:
           type: string
           description: Dockerfile path within the archive (default "Dockerfile").
@@ -286,7 +295,136 @@ tools:
           description: Build args (name -> value).
           descriptions:
             zh: 构建参数（名 -> 值）。
-      required: [repo, archive]
+        cache:
+          type: boolean
+          description: >-
+            Enable REGISTRY cache import/export (default TRUE). This is what
+            lets the cache outlive the buildkitd pod and be shared between
+            daemons. Note a `--mount=type=cache` directory is NOT part of an
+            export — only intermediate layers are, so `go mod download` is not
+            re-run but its modules are still unpacked. A daemon with a shared
+            PVC avoids that extra cost.
+          descriptions:
+            zh: >-
+              启用 registry 缓存导入/导出（默认 TRUE）。这让缓存不随 buildkitd Pod
+              消失，并可在多个 daemon 间共享。注意 `--mount=type=cache` 目录不会进导出——
+              只有中间层会，所以 `go mod download` 不会重跑，但模块仍需解压。有共享 PVC 的
+              daemon 可省掉这部分开销。
+        cache_repo:
+          type: string
+          description: Registry repo holding the cache (default "<repo>-cache").
+          descriptions:
+            zh: 存放缓存的 registry 路径（默认 "<repo>-cache"）。
+        cache_tag:
+          type: string
+          description: Cache tag (default = the image tag).
+          descriptions:
+            zh: 缓存 tag（默认同镜像 tag）。
+        cache_mode:
+          type: string
+          description: '"max" (all intermediate layers, default) or "min".'
+          descriptions:
+            zh: '"max"（所有中间层，默认）或 "min"。'
+      required: [repo]
+
+  - name: ops-build-image-stream
+    description: >-
+      Same as ops-build-image but consumes the STREAMING build endpoint and
+      returns as soon as the build reaches a terminal state, together with the
+      elapsed time and the (tail-bounded) build log. Use this when you want to
+      know how long a build took, or when a build is long enough that a single
+      blocking call is uncomfortable. Requires allow-write.
+    descriptions:
+      zh: >-
+        与 ops-build-image 相同，但走「流式」构建接口，在构建到达终态时立即返回，
+        并给出耗时与（截尾的）构建日志。当你想知道构建耗时、或构建较长不希望单次阻塞时使用。
+        需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        repo:
+          type: string
+          description: Destination repo path.
+          descriptions:
+            zh: 目标镜像路径。
+        tag:
+          type: string
+          description: Destination tag (default "latest").
+          descriptions:
+            zh: 目标 tag（默认 "latest"）。
+        archive:
+          type: string
+          description: The repo tarball as TEXT (small repos only).
+          descriptions:
+            zh: 仓库 tar.gz 的文本形式（仅适合小仓库）。
+        archive_base64:
+          type: string
+          description: The repo tarball base64-encoded (preferred for real tarballs).
+          descriptions:
+            zh: 仓库 tar.gz 的 base64（真实 tar.gz 请用这个）。
+        dockerfile:
+          type: string
+          description: Dockerfile path (default "Dockerfile").
+          descriptions:
+            zh: Dockerfile 路径（默认 "Dockerfile"）。
+        context:
+          type: string
+          description: Build-context subdirectory ("" = root).
+          descriptions:
+            zh: 构建上下文子目录（"" 表示根目录）。
+        build_args:
+          type: object
+          description: Build args (name -> value).
+          descriptions:
+            zh: 构建参数（名 -> 值）。
+        cache:
+          type: boolean
+          description: Enable registry cache import/export (default TRUE).
+          descriptions:
+            zh: 启用 registry 缓存导入/导出（默认 TRUE）。
+        cache_repo:
+          type: string
+          description: Registry repo holding the cache.
+          descriptions:
+            zh: 存放缓存的 registry 路径。
+        cache_tag:
+          type: string
+          description: Cache tag.
+          descriptions:
+            zh: 缓存 tag。
+        cache_mode:
+          type: string
+          description: '"max" (default) or "min".'
+          descriptions:
+            zh: '"max"（默认）或 "min"。'
+      required: [repo]
+
+  - name: ops-import-image
+    description: >-
+      Mirror an upstream image into the deployment registry (a no-op rebuild
+      that preserves the image config). Requires allow-write.
+    descriptions:
+      zh: >-
+        把上游镜像镜像到部署 registry（无操作重建，保留镜像配置）。需要 allow-write。
+    input_schema:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Upstream image, e.g. "docker.io/library/redis:7".
+          descriptions:
+            zh: 上游镜像，例如 "docker.io/library/redis:7"。
+        repo:
+          type: string
+          description: Destination repo path in the deployment registry.
+          descriptions:
+            zh: 部署 registry 中的目标路径。
+        tag:
+          type: string
+          description: Destination tag (default "latest").
+          descriptions:
+            zh: 目标 tag（默认 "latest"）。
+      required: [source, repo]
 
   - name: ops-list-pvcs
     description: List persistent volume claims (name, phase, size).

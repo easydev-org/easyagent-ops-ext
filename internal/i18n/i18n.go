@@ -27,6 +27,9 @@ const (
 	MsgScaled           = "scaled"
 	MsgPaused           = "paused"
 	MsgResumed          = "resumed"
+	MsgBuildDone        = "buildDone"
+	MsgBuildFailed      = "buildFailed"
+	MsgImageImported    = "imageImported"
 )
 
 // Catalog is the message table (open locale set: add a column per language).
@@ -106,6 +109,18 @@ var Catalog = easybusi18n.Catalog{
 	MsgResumed: {
 		"en": "resumed {name}",
 		"zh": "已恢复 {name}",
+	},
+	MsgBuildDone: {
+		"en": "build FINISHED in {elapsed}: {ref}",
+		"zh": "构建完成，耗时 {elapsed}：{ref}",
+	},
+	MsgBuildFailed: {
+		"en": "build FAILED: {err}",
+		"zh": "构建失败：{err}",
+	},
+	MsgImageImported: {
+		"en": "imported {ref}",
+		"zh": "已导入 {ref}",
 	},
 }
 

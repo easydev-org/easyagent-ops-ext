@@ -50,7 +50,9 @@ func Registry(d Deps) map[string]Handler {
 		"ops-pause-service":    t.pauseService,
 		"ops-resume-service":   t.resumeService,
 		// image build
-		"ops-build-image": t.buildImage,
+		"ops-build-image":        t.buildImage,
+		"ops-build-image-stream": t.buildImageStream,
+		"ops-import-image":       t.importImage,
 		// storage / config (read)
 		"ops-list-pvcs":       t.listPVCs,
 		"ops-get-pvc":         t.getPVC,
@@ -239,43 +241,6 @@ func (t *toolset) serviceManifest(ctx context.Context, args map[string]any, sess
 		return extension.ToolResultData{}, wrapErr(err)
 	}
 	return extension.ToolResultData{Content: res.GetYaml()}, nil
-}
-
-// ---- image build ------------------------------------------------------------
-
-func (t *toolset) buildImage(ctx context.Context, args map[string]any, session, tenant string) (extension.ToolResultData, error) {
-	locale := t.locale(session, tenant)
-	cfg := t.cfg(session, tenant)
-	if err := t.guard(cfg, "", true, locale); err != nil {
-		return extension.ToolResultData{}, err
-	}
-	cl, err := t.client(cfg)
-	if err != nil {
-		return extension.ToolResultData{}, err
-	}
-	repo := argStr(args, "repo")
-	if repo == "" {
-		return extension.ToolResultData{}, errArg("repo")
-	}
-	tag := argStr(args, "tag")
-	archive := argStr(args, "archive")
-	if archive == "" {
-		return extension.ToolResultData{}, &extension.TypedError{
-			Code:    easybus.ToolResultErrorCodeInvalidArgument,
-			Message: i18n.T(locale, i18n.MsgArchiveRequired, nil),
-		}
-	}
-	res, err := cl.BuildImage(ctx, &opsv1.BuildImageRequest{
-		Owner: tenant, Archive: []byte(archive), Dockerfile: orDefault(argStr(args, "dockerfile"), "Dockerfile"),
-		Context: argStr(args, "context"), Repo: repo, Tag: tag, BuildArgs: argMap(args, "build_args"),
-	})
-	if err != nil {
-		return extension.ToolResultData{}, wrapErr(err)
-	}
-	return extension.ToolResultData{
-		Content: i18n.T(locale, i18n.MsgImageBuilt, i18n.Params{"ref": res.GetImageRef()}) + "\n" + res.GetLog(),
-		Data:    map[string]any{"imageRef": res.GetImageRef()},
-	}, nil
 }
 
 // ---- storage / config (read) -----------------------------------------------
