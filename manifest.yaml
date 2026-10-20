@@ -18,6 +18,7 @@ tools:
     descriptions:
       zh: >-
         列出已部署的服务，含状态、就绪、副本数、镜像与 URL。行首 * 表示已就绪。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties: {}
@@ -27,6 +28,7 @@ tools:
     description: Show one service in detail (phase, ready replicas, URL, restarts, message).
     descriptions:
       zh: 查看单个服务的详情（状态、就绪副本、URL、重启次数、消息）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -41,6 +43,7 @@ tools:
     description: Read a service's container logs (tail lines).
     descriptions:
       zh: 读取服务容器日志（尾部若干行）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -73,6 +76,7 @@ tools:
     descriptions:
       zh: >-
         用结构化字段创建或替换一个长驻服务（Deployment + Service）。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -137,6 +141,7 @@ tools:
       zh: >-
         用编辑过的多文档 YAML 修补服务——这是升级（换镜像 tag、改 env、改资源）的正确方式。
         务必先 dry_run=true：只校验，不做任何改动。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -165,6 +170,7 @@ tools:
       zh: >-
         将服务回滚到之前的某个版本（k8s `rollout undo`）。省略 revision 表示上一个版本。
         需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -184,6 +190,7 @@ tools:
     description: Set a service's replica count. Requires allow-write.
     descriptions:
       zh: 设置服务的副本数。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -206,6 +213,7 @@ tools:
     descriptions:
       zh: >-
         暂停服务（缩到 0 副本），并记住原副本数以便恢复。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -220,6 +228,7 @@ tools:
     description: Resume a paused service (restores the remembered replica count). Requires allow-write.
     descriptions:
       zh: 恢复已暂停的服务（恢复之前记住的副本数）。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -239,6 +248,7 @@ tools:
       zh: >-
         删除一个服务（Deployment 和 Service 对象一并删除）。如果只是想暂时停掉，
         请用 ops-pause-service。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -253,6 +263,7 @@ tools:
     description: Show a service's live Kubernetes manifest as YAML.
     descriptions:
       zh: 以 YAML 显示服务的实际 Kubernetes manifest。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -272,6 +283,7 @@ tools:
       zh: >-
         用集群 buildkitd 从仓库 tarball（tar.gz）构建镜像并推送到 registry。
         需要 allow-write。构建完成后返回完整构建日志。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -358,6 +370,7 @@ tools:
         与 ops-build-image 相同，但走「流式」构建接口，在构建到达终态时立即返回，
         并给出耗时与（截尾的）构建日志。当你想知道构建耗时、或构建较长不希望单次阻塞时使用。
         需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -425,6 +438,7 @@ tools:
     descriptions:
       zh: >-
         把上游镜像镜像到部署 registry（无操作重建，保留镜像配置）。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -458,6 +472,7 @@ tools:
         Dockerfile 必须声明要导出的 stage（默认 "export"）：`FROM scratch AS export`
         加 `COPY --from=build /out /`。返回文件清单、每个小文件的内联文本，以及整棵树的
         base64 tar。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -554,6 +569,7 @@ tools:
       zh: >-
         在后台启动构建并立即返回 id。当你想轮询进度、同时做别的事、或希望能够取消时，
         用它代替 ops-build-image。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -622,6 +638,7 @@ tools:
       zh: >-
         按时间倒序列出构建，含状态、耗时、镜像与错误。记录存在 easyops 进程内存中：
         重启会清空。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -640,6 +657,7 @@ tools:
       zh: >-
         查看单个构建的状态、耗时、镜像/错误，以及日志尾部。这是回答
         「那个构建完成了没有、为什么失败」的方式。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -670,6 +688,7 @@ tools:
     descriptions:
       zh: >-
         取消正在运行的构建。已完成的构建不会被改动，直接返回其终态。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -684,6 +703,7 @@ tools:
     description: List persistent volume claims (name, phase, size).
     descriptions:
       zh: 列出持久卷声明（名称、状态、容量）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -706,6 +726,7 @@ tools:
     description: Show one PVC (phase, size, storage class, mounting workloads).
     descriptions:
       zh: 查看单个 PVC（状态、容量、存储类、挂载它的工作负载）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -723,6 +744,7 @@ tools:
     descriptions:
       zh: >-
         创建持久卷声明。可在服务或任务的 `volumes` 中挂载它。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -754,6 +776,7 @@ tools:
     descriptions:
       zh: >-
         删除 PVC。警告：会销毁其上的数据。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -768,6 +791,7 @@ tools:
     description: List config map names.
     descriptions:
       zh: 列出 ConfigMap 名称。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties: {}
@@ -777,6 +801,7 @@ tools:
     description: Show a config map's key names (values are not returned).
     descriptions:
       zh: 查看 ConfigMap 的键名（不返回值）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -798,6 +823,7 @@ tools:
         查看 ConfigMap 的完整内容（键和值）。ConfigMap 数据本身不是机密（机密在
         Secret 对象里），而 agent 无法修改自己读不到的 ConfigMap。
         只想快速看键名请用 ops-get-configmap。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -819,6 +845,7 @@ tools:
         创建或替换 ConfigMap。注意：`data` 会整体替换该对象——你遗漏的任何键都会被删除。
         请先用 ops-get-configmap-values 读出当前完整内容，再提交完整的 map。
         可用 dry_run=true 先校验。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -850,6 +877,7 @@ tools:
     description: Delete a config map. Requires allow-write.
     descriptions:
       zh: 删除 ConfigMap。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -867,6 +895,7 @@ tools:
     descriptions:
       zh: >-
         列出机密名及其键名。机密值永不返回给客户端。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties: {}
@@ -878,6 +907,7 @@ tools:
     descriptions:
       zh: >-
         查看机密的键名及其是否已设置。值会被隐去。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -899,6 +929,7 @@ tools:
         返回机密的完整内容（键和值）。这是特权操作：除非确实需要该凭据，否则请用
         ops-get-secret（仅键名）。它存在的原因是 ops-put-secret 会整体替换对象，
         不先读就写会静默销毁其他键。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -918,6 +949,7 @@ tools:
       zh: >-
         创建或替换机密。注意：`data` 会整体替换该对象——遗漏的键会被删除；请先用
         ops-get-secret-values 读出。可用 `dry_run` 校验。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -947,6 +979,7 @@ tools:
     description: Delete a secret. Requires allow-write.
     descriptions:
       zh: 删除机密。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -967,6 +1000,7 @@ tools:
       zh: >-
         以 Kubernetes Job 方式运行一次性容器任务（如一次 buildctl 构建、迁移、测试）。
         最多等待 5 分钟到终态（更久的任务返回 "active"，用 ops-get-job 轮询）。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1046,6 +1080,7 @@ tools:
     description: List jobs with state (active/succeeded/failed), exit code and failure reason.
     descriptions:
       zh: 列出任务及其状态（active/succeeded/failed）、退出码与失败原因。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties: {}
@@ -1055,6 +1090,7 @@ tools:
     description: Show one job (state, exit code, failure reason, timestamps).
     descriptions:
       zh: 查看单个任务（状态、退出码、失败原因、时间戳）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1069,6 +1105,7 @@ tools:
     description: Read a job pod's logs (tail lines).
     descriptions:
       zh: 读取任务 Pod 的日志（尾部若干行）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1093,6 +1130,7 @@ tools:
     description: Delete a job and its pods. Requires allow-write.
     descriptions:
       zh: 删除任务及其 Pod。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1122,6 +1160,7 @@ tools:
       zh: >-
         创建一个 worker 沙箱（一台可执行命令的机器）并返回其 URL。就绪后用
         sandbox-* / computer-* 工具在里面工作。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1181,6 +1220,7 @@ tools:
     description: List sandboxes with phase, readiness, image and URL.
     descriptions:
       zh: 列出沙箱及其状态、就绪、镜像与 URL。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties: {}
@@ -1190,6 +1230,7 @@ tools:
     description: Show one sandbox (phase, readiness, image, URL).
     descriptions:
       zh: 查看单个沙箱（状态、就绪、镜像、URL）。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1207,6 +1248,7 @@ tools:
     descriptions:
       zh: >-
         返回沙箱的集群内 URL 及其 token——直接访问它所需的东西。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1221,6 +1263,7 @@ tools:
     description: Delete a sandbox (its Pod, Service and Secret). Requires allow-write.
     descriptions:
       zh: 删除沙箱（Pod、Service、Secret 一并删除）。需要 allow-write。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
@@ -1240,6 +1283,7 @@ tools:
       zh: >-
         读取沙箱 Pod 的日志。这是诊断「沙箱起不来」的唯一手段——sandbox-ext 无法进入
         一个没起来的沙箱。无输出时会显示 pod 状态 / 重启次数 / 原因。
+    required_config: [easyops-url]
     input_schema:
       type: object
       properties:
