@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -race ./...
+      # yaml.safe_load accepts duplicate mapping keys, so a repeated env var passes
+      # locally and only fails on the runner ("mapping key already defined").
+      - name: lint yaml (duplicate keys)
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PY'
+          import sys, yaml
+          class Strict(yaml.SafeLoader): pass
+          def no_dup(loader, node, deep=False):
+              seen = set()
+              for k, _ in node.value:
+                  key = loader.construct_object(k, deep=deep)
+                  if key in seen:
+                      raise ValueError(f"duplicate key {key!r} at line {k.start_mark.line+1}")
+                  seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+          Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, no_dup)
+          bad = 0
+          for f in ("manifest.yaml",):
+              try:
+                  yaml.load(open(f), Loader=Strict); print("OK  ", f)
+              except Exception as e:
+                  print("FAIL", f, e); bad = 1
+          sys.exit(bad)
+          PY
+
+  # The ops tools talk to a REAL easyops API. The upstream service is not public,
+  # so this job is gated on a stub being in place rather than pretending a mock is
+  # the same thing; until then the unit suite (which covers the request shaping)
+  # is what runs. See internal/tools/e2e_test.go for the contract it expects.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: unit
+    if: ${{ vars.OPS_E2E_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./... -run 'E2E|Integration' -v -timeout 600s
