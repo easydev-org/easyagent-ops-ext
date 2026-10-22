@@ -63,7 +63,19 @@ func main() {
 		h := h
 		specs[name] = extension.ToolSpec{
 			Execute: func(ctx context.Context, args map[string]any, callID, session, tenant string) (extension.ToolResultData, error) {
-				return h(ctx, args, session, tenant)
+				// Install a progress sink for THIS call.
+				//
+				// The tenant and call id are only known here, so the sink cannot be
+				// built once in Deps. Without it a build/rollout runs for minutes
+				// with the console showing nothing but "running".
+				cctx := tools.WithProgress(ctx, func(pctx context.Context, p *easybus.ToolProgress) {
+					if ext != nil {
+						// A dropped UI update must never fail the operation: the work
+						// already happened.
+						_ = ext.ReportProgress(pctx, tenant, callID, p)
+					}
+				})
+				return h(cctx, args, session, tenant)
 			},
 		}
 	}

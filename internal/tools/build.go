@@ -126,6 +126,14 @@ func (t *toolset) buildImageStream(ctx context.Context, args map[string]any, ses
 	started := time.Now()
 	var mu sync.Mutex
 	var log strings.Builder
+	// Forward each chunk to the console as it arrives.
+	//
+	// The stream was already here — the chunks were simply collected into the final
+	// result and nothing else, so a five-minute build showed "running" and then
+	// everything at once. The tool's RESULT is unchanged; this only makes the wait
+	// observable.
+	prog := NewProgress()
+	defer prog.Flush(ctx)
 	stream, err := cl.BuildImageStream(ctx, req)
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)
@@ -147,6 +155,12 @@ func (t *toolset) buildImageStream(ctx context.Context, args map[string]any, ses
 				log.WriteString(chunk)
 			}
 			mu.Unlock()
+			prog.Add(ctx, chunk)
+		}
+		if st := ev.GetState(); st != "" && st != "done" && st != "failed" {
+			// A build state change ("exporting", "pushing") is what the user is
+			// waiting on, and it carries no output of its own.
+			prog.Phase(ctx, "running", "build: "+st)
 		}
 		if st := ev.GetState(); st == "done" || st == "failed" {
 			final = ev

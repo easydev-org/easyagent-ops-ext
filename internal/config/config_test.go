@@ -4,19 +4,17 @@ import "testing"
 
 func TestParse(t *testing.T) {
 	m := map[string]string{
-		KnobURL:        "http://easyops:8080",
-		KnobToken:      "tok",
-		KnobNamespace:  "dev",
-		KnobAllowWrite: "true",
+		KnobURL:       "http://easyops:8080",
+		KnobToken:     "tok",
+		KnobNamespace: "dev",
 	}
 	c := Parse(func(k string) string { return m[k] })
-	if c.URL != "http://easyops:8080" || c.Token != "tok" || c.Namespace != "dev" || !c.AllowWrite {
+	if c.URL != "http://easyops:8080" || c.Token != "tok" || c.Namespace != "dev" {
 		t.Fatalf("parse = %+v", c)
 	}
-	// Defaults: no allow-write => false.
-	c2 := Parse(func(string) string { return "" })
-	if c2.AllowWrite {
-		t.Error("allow-write must default to false")
+	// Unset knobs parse to empty, not to garbage.
+	if empty := Parse(func(string) string { return "" }); empty.URL != "" || empty.Namespace != "" {
+		t.Errorf("empty config = %+v", empty)
 	}
 }
 

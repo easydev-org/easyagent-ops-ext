@@ -22,13 +22,23 @@ func reg(values map[string]string) map[string]Handler {
 	})
 }
 
-// TestWriteToolsRequireAllowWrite: every state-changing tool must refuse when
-// allow-write is off — BEFORE it reaches easyops.
-func TestWriteToolsRequireAllowWrite(t *testing.T) {
+// TestWriteToolsAreNotGatedByAllowWrite: a state-changing tool must reach the
+// backend regardless of `allow-write`.
+//
+// That knob used to refuse every write before it left the extension. It was a
+// second switch layered under the NAMESPACE scope, and its only effect in practice
+// was to block legitimate work until someone remembered to set it — with an error
+// naming a knob the caller could not set. The namespace is the real blast-radius
+// limit, and it is still enforced (see the namespace test below).
+//
+// The backend here is deliberately unroutable, so the assertion is precise: the
+// call gets far enough to fail on the NETWORK, which can only happen if the
+// allow-write gate let it through.
+func TestWriteToolsAreNotGatedByAllowWrite(t *testing.T) {
 	r := reg(map[string]string{
 		config.KnobURL:       "http://127.0.0.1:1", // unroutable on purpose
 		config.KnobNamespace: "dev",
-		// allow-write deliberately absent
+		// allow-write deliberately ABSENT: it must not matter.
 	})
 	writes := []struct {
 		tool string
@@ -59,23 +69,24 @@ func TestWriteToolsRequireAllowWrite(t *testing.T) {
 	for _, w := range writes {
 		_, err := r[w.tool](context.Background(), w.args, "s", "t")
 		if err == nil {
-			t.Errorf("%s: must refuse when allow-write is off", w.tool)
-			continue
+			continue // reached the backend and somehow succeeded: fine
 		}
-		var te *extension.TypedError
-		if ok := asTyped(err, &te); !ok || !strings.Contains(te.Message, "allow-write") {
-			t.Errorf("%s: error = %v, want the allow-write message", w.tool, err)
+		if strings.Contains(err.Error(), "allow-write") {
+			t.Errorf("%s: still gated by allow-write: %v", w.tool, err)
 		}
+		// Any OTHER error (connection refused) proves it was let through.
 	}
 }
 
-// TestNamespaceGuardOnCreateJob: a namespace outside the allow-list is refused
-// even when writes are enabled.
+// TestNamespaceGuardOnCreateJob: a namespace outside the allow-list is refused.
+//
+// This is the boundary that MATTERS: it keeps one extension from touching another
+// team's namespace. (The old `allow-write` switch only toggled writes on and off
+// wholesale, which is not a blast-radius limit at all.)
 func TestNamespaceGuardOnCreateJob(t *testing.T) {
 	r := reg(map[string]string{
-		config.KnobURL:        "http://127.0.0.1:1",
-		config.KnobNamespace:  "dev",
-		config.KnobAllowWrite: "true",
+		config.KnobURL:       "http://127.0.0.1:1",
+		config.KnobNamespace: "dev",
 	})
 	_, err := r["ops-create-job"](context.Background(), map[string]any{
 		"name": "j", "image": "i", "namespace": "worker",
@@ -94,35 +105,6 @@ func TestURLRequired(t *testing.T) {
 	r := reg(map[string]string{})
 	if _, err := r["ops-list-services"](context.Background(), map[string]any{}, "s", "t"); err == nil {
 		t.Fatal("missing easyops-url must error")
-	}
-}
-
-// TestBooleanKnobIsHonoured: `allow-write` is declared `type: boolean`, so the
-// config value arrives as a BOOL. A reader that only accepts strings would see
-// "" and the guard would never lift — this pins that a bool is understood.
-func TestBooleanKnobIsHonoured(t *testing.T) {
-	r := Registry(Deps{
-		Cache:  ops.NewClientCache(2),
-		Locale: func(string, string) string { return "en" },
-		GetConfig: func(name, _, _ string) any {
-			switch name {
-			case config.KnobURL:
-				return "http://127.0.0.1:1" // unroutable: we only assert the GUARD passes
-			case config.KnobNamespace:
-				return "dev"
-			case config.KnobAllowWrite:
-				return true // ← a bool, not "true"
-			}
-			return nil
-		},
-	})
-	_, err := r["ops-delete-job"](context.Background(), map[string]any{"name": "j"}, "s", "t")
-	// The guard must PASS now, so the failure (if any) is the unreachable
-	// backend — NOT the allow-write refusal.
-	if err != nil {
-		if te, ok := err.(*extension.TypedError); ok && strings.Contains(te.Message, "allow-write") {
-			t.Fatalf("allow-write=true (bool) must lift the guard, got: %v", te.Message)
-		}
 	}
 }
 

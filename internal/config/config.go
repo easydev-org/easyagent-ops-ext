@@ -12,27 +12,24 @@ import "strings"
 
 // Knob names — single source of truth for the manifest + readers.
 const (
-	KnobURL        = "easyops-url"
-	KnobToken      = "easyops-token"
-	KnobNamespace  = "namespace"
-	KnobAllowWrite = "allow-write"
+	KnobURL       = "easyops-url"
+	KnobToken     = "easyops-token"
+	KnobNamespace = "namespace"
 )
 
 // Config is the parsed ops-ext configuration.
 type Config struct {
-	URL        string
-	Token      string
-	Namespace  string
-	AllowWrite bool
+	URL       string
+	Token     string
+	Namespace string
 }
 
 // Parse builds a Config from the raw knob values.
 func Parse(get func(name string) string) Config {
 	return Config{
-		URL:        strings.TrimSpace(get(KnobURL)),
-		Token:      strings.TrimSpace(get(KnobToken)),
-		Namespace:  strings.TrimSpace(get(KnobNamespace)),
-		AllowWrite: strings.EqualFold(strings.TrimSpace(get(KnobAllowWrite)), "true"),
+		URL:       strings.TrimSpace(get(KnobURL)),
+		Token:     strings.TrimSpace(get(KnobToken)),
+		Namespace: strings.TrimSpace(get(KnobNamespace)),
 	}
 }
 

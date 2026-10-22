@@ -40,6 +40,14 @@ func (t *toolset) deployService(ctx context.Context, args map[string]any, sessio
 		Memory:        argStr(args, "memory"),
 		Command:       argStrList(args, "command"),
 	}
+	// DeployService blocks until the rollout settles, which for a real image is
+	// tens of seconds to minutes. The RPC is a single call, so there is no stream
+	// to forward — but the WAIT must still be visible, or the console shows
+	// "running" with nothing behind it.
+	EmitProgress(ctx, &easybus.ToolProgress{
+		Phase: easybusStr("running"),
+		Text:  easybusStr("deploying " + name + " (waiting for rollout)"),
+	})
 	res, err := cl.DeployService(ctx, req)
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)

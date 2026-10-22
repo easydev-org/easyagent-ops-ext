@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	easybus "github.com/easydev-org/easybus-sdk"
 	"github.com/easydev-org/easybus-sdk/extension"
 
 	opsv1 "github.com/easydev-org/easyagent-ops-ext/gen/easyops/v1"
@@ -68,6 +69,12 @@ func (t *toolset) createSandbox(ctx context.Context, args map[string]any, sessio
 	if name == "" {
 		return extension.ToolResultData{}, errArg("name")
 	}
+	// Creating a sandbox is Pod + Service + Secret and then waiting for the Pod to
+	// become ready — up to ready_timeout_seconds. Show the wait.
+	EmitProgress(ctx, &easybus.ToolProgress{
+		Phase: easybusStr("running"),
+		Text:  easybusStr("creating sandbox " + name + " and waiting for it to become ready"),
+	})
 	res, err := cl.CreateSandbox(ctx, &opsv1.CreateSandboxRequest{
 		Owner: tenant, Session: session, Name: name,
 		Image:               argStr(args, "image"),

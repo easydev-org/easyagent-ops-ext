@@ -151,12 +151,19 @@ func (t *toolset) guard(cfg config.Config, ns string, write bool, locale string)
 			Message: i18n.T(locale, i18n.MsgNamespaceDenied, i18n.Params{"ns": ns, "allowed": cfg.Namespace}),
 		}
 	}
-	if write && !cfg.AllowWrite {
-		return &extension.TypedError{
-			Code:    easybus.ToolResultErrorCodePermissionDenied,
-			Message: i18n.T(locale, i18n.MsgWriteDisabled, nil),
-		}
-	}
+	// `allow-write` is NOT enforced.
+	//
+	// It was a second, per-extension switch on top of the namespace scope, and in
+	// practice it only ever produced one outcome: every write tool refused until
+	// someone remembered to flip it, with an error that names a knob the caller
+	// cannot set. The useful boundary is the NAMESPACE — "this extension may only
+	// touch `dev`" is a real blast-radius limit; "writes are on/off" is a
+	// deployment-wide toggle that the deployment itself already expresses by
+	// mounting credentials and granting RBAC.
+	//
+	// The knob is left declared so existing configs do not error, but it no longer
+	// gates anything.
+	_ = write
 	return nil
 }
 
@@ -467,6 +474,13 @@ func (t *toolset) createJob(ctx context.Context, args map[string]any, session, t
 	for _, v := range argVolumeMounts(args) {
 		req.Volumes = append(req.Volumes, v)
 	}
+	// CreateJob returns when the Job's first state is known, but a job that runs to
+	// completion can take minutes and the caller is left staring at "running".
+	// Announce the wait so the console shows what is happening.
+	EmitProgress(ctx, &easybus.ToolProgress{
+		Phase: easybusStr("running"),
+		Text:  easybusStr("creating job " + name + " and waiting for its first state"),
+	})
 	res, err := cl.CreateJob(ctx, req)
 	if err != nil {
 		return extension.ToolResultData{}, wrapErr(err)

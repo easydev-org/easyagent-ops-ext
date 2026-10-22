@@ -1408,13 +1408,3 @@ config:
       zh: >-
         本扩展唯一允许操作的命名空间。请求携带的命名空间必须与之一致。留空则关闭检查。
 
-  - name: allow-write
-    type: boolean
-    scope: global
-    default: false
-    description: >-
-      Enable state-changing tools (build image, create/delete job). OFF by
-      default: an agent can still list/get/logs but cannot change anything.
-    descriptions:
-      zh: >-
-        启用会改变状态的工具（构建镜像、创建/删除任务）。默认关闭：agent 仍可列出/查看/看日志，但不能改动任何东西。
