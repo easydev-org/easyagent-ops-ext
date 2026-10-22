@@ -11,6 +11,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -129,7 +130,12 @@ func (t *toolset) cfg(session, tenant string) config.Config {
 			return fmt.Sprintf("%v", v)
 		}
 	}
-	return config.Parse(get)
+	c := config.Parse(get)
+	// The tenant this call is running as, and whether the URL resolved. A tenant
+	// mismatch between the config snapshot and the tool call is invisible from
+	// every other vantage point.
+	slog.Warn("ops cfg resolved", "tenant", tenant, "session", session, "url", c.URL)
+	return c
 }
 
 // client resolves the easyops client, ensuring the URL is configured.

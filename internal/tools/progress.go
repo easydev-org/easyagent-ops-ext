@@ -33,7 +33,7 @@ func EmitProgress(ctx context.Context, p *easybus.ToolProgress) {
 	}
 	// A frame with nowhere to go would otherwise vanish, which looks exactly like
 	// "the extension reported nothing".
-	slog.Debug("tool progress dropped: no sink on context")
+	slog.Warn("tool progress dropped: no sink on context")
 }
 
 // Progress is the helper the long-running tools use.
